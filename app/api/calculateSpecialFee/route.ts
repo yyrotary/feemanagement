@@ -1,5 +1,49 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS, DEFAULT_SPECIAL_EVENT_FEE } from '@/lib/notion';
+import { 
+  PageObjectResponse,
+  PartialPageObjectResponse,
+  DatabaseObjectResponse,
+  PartialDatabaseObjectResponse
+} from '@notionhq/client/build/src/api-endpoints';
+
+interface NotionMasterInfoProperties {
+  specialevent_fee: {
+    number: number;
+  };
+}
+
+interface NotionEventProperties {
+  name: {
+    relation: Array<{
+      id: string;
+    }>;
+  };
+  date: {
+    date: {
+      start: string;
+    };
+  };
+  events: {
+    multi_select: Array<{
+      name: string;
+    }>;
+  };
+}
+
+interface NotionMemberProperties {
+  Name: {
+    title: Array<{
+      plain_text: string;
+    }>;
+  };
+}
+
+type NotionPage = PageObjectResponse | PartialPageObjectResponse | DatabaseObjectResponse | PartialDatabaseObjectResponse;
+
+function isFullPage(page: NotionPage): page is PageObjectResponse {
+  return 'properties' in page;
+}
 
 export async function GET(request: Request) {
   try {
@@ -21,29 +65,25 @@ export async function GET(request: Request) {
       ]
     });
 
-    // API 응답 로깅
-    console.log('Notion API Response:', JSON.stringify(eventsResponse.results[0]?.properties, null, 2));
-
     // 마스터 정보에서 특별회비 금액 조회
     const masterInfoResponse = await notionClient.databases.query({
       database_id: DATABASE_IDS.MASTER_INFO,
     });
 
     // 안전하게 타입 처리
-    const firstResult = masterInfoResponse.results[0] || {};
-    const properties = (firstResult as any).properties || {};
-    const specialEventFee = properties.specialevent_fee?.number || DEFAULT_SPECIAL_EVENT_FEE;
+    const firstResult = masterInfoResponse.results[0];
+    if (!firstResult || !isFullPage(firstResult)) {
+      throw new Error('Invalid response from Notion API');
+    }
+    const properties = firstResult.properties as unknown as NotionMasterInfoProperties;
+    const specialEventFee = properties?.specialevent_fee?.number || DEFAULT_SPECIAL_EVENT_FEE;
 
     // 결과 매핑 시 안전하게 타입 처리
-    const events = await Promise.all(eventsResponse.results.map(async (page: any) => {
-      const pageProperties = page.properties || {};
-      
-      // 각 속성 로깅
-      console.log('Page Properties:', {
-        nameProperty: pageProperties.name,
-        dateProperty: pageProperties.date,
-        eventsProperty: pageProperties.events
-      });
+    const events = await Promise.all(eventsResponse.results.map(async (page) => {
+      if (!isFullPage(page)) {
+        throw new Error('Invalid page object from Notion API');
+      }
+      const pageProperties = page.properties as unknown as NotionEventProperties;
       
       // 회원 정보 조회
       const memberId = pageProperties.name?.relation?.[0]?.id;
@@ -51,15 +91,17 @@ export async function GET(request: Request) {
       
       if (memberId) {
         const memberResponse = await notionClient.pages.retrieve({ page_id: memberId });
-        memberNameFromDb = (memberResponse as any).properties?.Name?.title?.[0]?.plain_text || '';
+        if (!isFullPage(memberResponse)) {
+          throw new Error('Invalid member response from Notion API');
+        }
+        const memberProperties = memberResponse.properties as unknown as NotionMemberProperties;
+        memberNameFromDb = memberProperties.Name?.title?.[0]?.plain_text || '';
       }
 
       const date = pageProperties.date?.date?.start || '';
-      const eventsList = pageProperties.events?.multi_select?.map((item: any) => item.name) || [];
+      const eventsList = pageProperties.events?.multi_select?.map(item => item.name) || [];
       const events = eventsList.join(', ');
       const isPersonal = memberName ? memberNameFromDb === memberName : false;
-
-      console.log('Processing event:', { memberNameFromDb, date, events, isPersonal, memberName });
       
       return {
         id: page.id,
@@ -74,13 +116,6 @@ export async function GET(request: Request) {
     const payableEvents = events.filter(event => !event.isPersonal);
     const totalFee = payableEvents.length * specialEventFee;
 
-    console.log('Calculation result:', {
-      totalEvents: events.length,
-      payableEvents: payableEvents.length,
-      specialEventFee,
-      totalFee
-    });
-
     return NextResponse.json({
       events: payableEvents,
       totalFee,
@@ -88,6 +123,9 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Error calculating special fee:', error);
-    return NextResponse.json({ error: 'Failed to calculate special fee' }, { status: 500 });
+    return NextResponse.json({ 
+      error: '특별회비 계산 중 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 } 
