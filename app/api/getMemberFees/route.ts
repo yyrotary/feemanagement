@@ -1,5 +1,35 @@
 import { NextResponse } from 'next/server';
 import { notion, MEMBER_DB_ID, FEE_DB_ID } from '@/lib/notion';
+import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
+
+interface NotionMemberProperties {
+  Name: {
+    title: Array<{
+      plain_text: string;
+    }>;
+  };
+  deduction: {
+    select?: {
+      name: string;
+    };
+  };
+}
+
+interface NotionFeeProperties {
+  date: {
+    date: {
+      start: string;
+    };
+  };
+  paid_fee: {
+    number: number;
+  };
+  method: {
+    multi_select: Array<{
+      name: string;
+    }>;
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -20,16 +50,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '회원을 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    const member = memberResponse.results[0];
-    const name = member.properties.Name.title[0].plain_text;
-    const isElder = member.properties.deduction.select?.name === '원로';
+    const member = memberResponse.results[0] as PageObjectResponse;
+    const properties = member.properties as unknown as NotionMemberProperties;
+    const name = properties.Name.title[0].plain_text;
+    const isElder = properties.deduction.select?.name === '원로';
     const requiredFee = isElder ? 200000 : 720000;
 
     // 회비 내역 조회
     const feeResponse = await notion.databases.query({
       database_id: FEE_DB_ID,
       filter: {
-        property: 'name',
+        property: 'fee',
         relation: {
           contains: member.id
         }
@@ -42,11 +73,14 @@ export async function POST(request: Request) {
       ]
     });
 
-    const feeHistory = feeResponse.results.map(fee => ({
-      date: fee.properties.date.date.start,
-      paid_fee: fee.properties.paid_fee.number,
-      method: fee.properties.method.multi_select.map(m => m.name)
-    }));
+    const feeHistory = feeResponse.results.map((fee: PageObjectResponse) => {
+      const feeProperties = fee.properties as unknown as NotionFeeProperties;
+      return {
+        date: feeProperties.date.date.start,
+        paid_fee: feeProperties.paid_fee.number,
+        method: feeProperties.method.multi_select.map(m => m.name)
+      };
+    });
 
     const totalPaid = feeHistory.reduce((sum, fee) => sum + fee.paid_fee, 0);
     const remainingFee = Math.max(0, requiredFee - totalPaid);
