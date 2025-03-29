@@ -17,7 +17,16 @@ interface ServiceFeeRecord {
   method: 'cash' | 'card' | 'deposit';
 }
 
-const AMOUNTS = [100000, 50000, 30000, 20000, 10000];
+interface ServiceFeeAPIResponse {
+  id: string;
+  date: string;
+  amount: number;
+  method: string;
+  memberId?: string;
+  memberName?: string;
+}
+
+const AMOUNTS = [500000, 100000, 50000, 30000, 20000, 10000];
 const METHODS = ['cash', 'card', 'deposit'] as const;
 
 export default function ServiceFeePage() {
@@ -60,9 +69,25 @@ export default function ServiceFeePage() {
         const response = await fetch(`/api/getServiceFees?date=${date}`);
         if (!response.ok) throw new Error('봉사금 기록 로드 실패');
         const data = await response.json();
-        setRecords(data);
+        
+        // API는 { fees: [...] } 형식으로 데이터를 반환
+        if (Array.isArray(data.fees)) {
+          // 받은 데이터 구조를 컴포넌트에서 필요한 구조로 변환
+          const formattedRecords = data.fees.map((fee: ServiceFeeAPIResponse) => ({
+            id: fee.id,
+            memberId: fee.memberId || '',
+            memberName: fee.memberName || '회원',
+            amount: fee.amount || 0,
+            method: fee.method || 'cash'
+          }));
+          setRecords(formattedRecords);
+        } else {
+          console.error('Invalid API response format:', data);
+          setRecords([]);
+        }
       } catch (err) {
         console.error('Error loading service fees:', err);
+        setRecords([]);
       } finally {
         setLoading(false);
       }
@@ -127,10 +152,15 @@ export default function ServiceFeePage() {
       total: 0
     };
 
-    records.forEach(record => {
-      totals[record.method] += record.amount;
-      totals.total += record.amount;
-    });
+    // 레코드가 배열인지 확인하고 처리
+    if (Array.isArray(records)) {
+      records.forEach(record => {
+        if (record && record.method && typeof record.amount === 'number') {
+          totals[record.method] += record.amount;
+          totals.total += record.amount;
+        }
+      });
+    }
 
     return totals;
   };

@@ -12,9 +12,10 @@ interface ServiceFeeSectionProps {
   memberId: string;
   memberName: string;
   nickname?: string;
+  date?: string;
 }
 
-export default function ServiceFeeSection({ memberId }: ServiceFeeSectionProps) {
+export default function ServiceFeeSection({ memberId, date }: ServiceFeeSectionProps) {
   const [fees, setFees] = useState<ServiceFee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,15 +33,45 @@ export default function ServiceFeeSection({ memberId }: ServiceFeeSectionProps) 
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/getServiceFees?memberId=${encodeURIComponent(memberId)}`);
+        // 쿼리 파라미터 구성
+        const queryParams = new URLSearchParams();
+        queryParams.append('memberId', memberId);
         
+        // 날짜가 있는 경우 추가
+        if (date) {
+          queryParams.append('date', date);
+        }
+
+        console.log('Fetching service fees with params:', queryParams.toString());
+        
+        const response = await fetch(`/api/getServiceFees?${queryParams.toString()}`);
+        
+        // 응답이 성공적이지 않은 경우
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || '봉사금 내역을 불러오는데 실패했습니다.');
+          const errorText = await response.text(); // 텍스트로 읽어보기
+          console.error('API error response:', response.status, errorText);
+          
+          try {
+            // JSON 형식인 경우 파싱
+            const errorData = JSON.parse(errorText);
+            throw new Error(errorData.error || '봉사금 내역을 불러오는데 실패했습니다.');
+          } catch (e) {
+            // JSON 파싱 실패 시 상태 코드와 함께 에러 메시지 표시
+            throw new Error(`봉사금 내역을 불러오는데 실패했습니다. (${response.status})`);
+          }
         }
 
         const data = await response.json();
-        setFees(data.fees || []);
+        console.log('API response data:', data);
+        
+        // fees 배열이 있는지 확인
+        if (Array.isArray(data.fees)) {
+          setFees(data.fees);
+        } else {
+          console.error('Invalid API response format:', data);
+          setFees([]);
+          setError('서버에서 잘못된 형식의 데이터를 반환했습니다.');
+        }
       } catch (err) {
         console.error('Error fetching service fee data:', err);
         setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
@@ -51,7 +82,7 @@ export default function ServiceFeeSection({ memberId }: ServiceFeeSectionProps) 
     };
 
     fetchData();
-  }, [memberId]);
+  }, [memberId, date]);
 
   if (loading) {
     return <div className={styles.loading}>로딩 중...</div>;

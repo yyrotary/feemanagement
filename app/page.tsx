@@ -89,13 +89,13 @@ export default function Home() {
         <button type="submit" disabled={loading} className={styles.button}>
           {loading ? '조회중...' : '조회하기'}
         </button>
-        <p className={styles.inputHelp}>권민혁 회원은 휴대번호 앞 4자리 입력</p>
+        <p className={styles.inputHelp}>권민혁 회원님은 휴대번호 앞 4자리 입력</p>
       </form>
 
       {memberData && (
         <div className={styles.result}>
           <h2 className={styles.title1}>{memberData.nickname ? `${memberData.nickname} ` : ''}{memberData.name} 회원님의 회비 현황</h2>
-          <p className={styles.accountInfo}>입금계좌: 농협 713014-51-076725 (영양로타리클럽)</p>
+          
           
           <div className={styles.feeTypeSelector}>
             <button 
@@ -116,7 +116,9 @@ export default function Home() {
             >
               봉사금
             </button>
+            
           </div>
+          <p className={styles.accountInfo}>입금계좌: 농협 713014-51-076725 (영양로타리클럽)</p>
 
           {feeType === 'general' ? (
             <>
