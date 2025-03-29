@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { notion, MEMBER_DB_ID, FEE_DB_ID } from '@/lib/notion';
-import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
+import { PageObjectResponse, DatabaseObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionMemberProperties {
   Name: {
@@ -30,6 +30,8 @@ interface NotionFeeProperties {
     }>;
   };
 }
+
+type NotionPage = PageObjectResponse | DatabaseObjectResponse;
 
 export async function POST(request: Request) {
   try {
@@ -73,8 +75,9 @@ export async function POST(request: Request) {
       ]
     });
 
-    const feeHistory = feeResponse.results.map((fee: PageObjectResponse) => {
-      const feeProperties = fee.properties as unknown as NotionFeeProperties;
+    const feeHistory = feeResponse.results.map((fee) => {
+      const feePage = fee as PageObjectResponse;
+      const feeProperties = feePage.properties as unknown as NotionFeeProperties;
       return {
         date: feeProperties.date.date.start,
         paid_fee: feeProperties.paid_fee.number,
