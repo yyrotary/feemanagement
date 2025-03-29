@@ -34,6 +34,7 @@ interface NotionFeeProperties {
 export async function POST(request: Request) {
   try {
     const { phone } = await request.json();
+    console.log('Searching for phone:', phone);
 
     // 회원 정보 조회
     const memberResponse = await notion.databases.query({
@@ -46,12 +47,16 @@ export async function POST(request: Request) {
       }
     });
 
+    console.log('Member response:', memberResponse);
+
     if (!memberResponse.results.length) {
       return NextResponse.json({ error: '회원을 찾을 수 없습니다.' }, { status: 404 });
     }
 
     const member = memberResponse.results[0] as PageObjectResponse;
     const properties = member.properties as unknown as NotionMemberProperties;
+    console.log('Member properties:', properties);
+
     const name = properties.Name.title[0].plain_text;
     const isElder = properties.deduction.select?.name === '원로';
     const requiredFee = isElder ? 200000 : 720000;
@@ -72,6 +77,8 @@ export async function POST(request: Request) {
         }
       ]
     });
+
+    console.log('Fee response:', feeResponse);
 
     const feeHistory = feeResponse.results.map((fee) => {
       const feePage = fee as PageObjectResponse;
@@ -94,7 +101,10 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error:', error);
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
+    console.error('Error details:', error);
+    return NextResponse.json({ 
+      error: '서버 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }
