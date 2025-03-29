@@ -25,7 +25,6 @@ export default function ServiceFeePage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [records, setRecords] = useState<ServiceFeeRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -143,7 +142,6 @@ export default function ServiceFeePage() {
   };
 
   if (loading) return <div className={styles.container}>회원 목록을 불러오는 중...</div>;
-  if (error) return <div className={styles.container}>에러: {error}</div>;
 
   return (
     <div className={styles.container}>
