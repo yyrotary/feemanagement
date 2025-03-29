@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     const feeResponse = await notion.databases.query({
       database_id: FEE_DB_ID,
       filter: {
-        property: 'fee',
+        property: 'name',
         relation: {
           contains: member.id
         }
