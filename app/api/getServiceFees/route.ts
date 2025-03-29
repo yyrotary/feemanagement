@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { notion } from '@/lib/notion';
+import { notionClient, DATABASE_IDS } from '@/lib/notion';
 import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionProperties {
@@ -32,16 +32,14 @@ interface NotionMemberProperties {
   };
 }
 
-const SERVICE_FEE_DB_ID = '1c47c9ec930b805fa2afe3716f9d7544';
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
     if (!date) return NextResponse.json({ error: '날짜 필요' }, { status: 400 });
 
-    const response = await notion.databases.query({
-      database_id: SERVICE_FEE_DB_ID,
+    const response = await notionClient.databases.query({
+      database_id: DATABASE_IDS.SERVICE_FEES,
       filter: {
         and: [
           {
@@ -66,7 +64,7 @@ export async function GET(request: Request) {
         let memberName = '';
 
         if (memberId) {
-          const memberPage = await notion.pages.retrieve({ page_id: memberId });
+          const memberPage = await notionClient.pages.retrieve({ page_id: memberId });
           const memberProperties = (memberPage as PageObjectResponse).properties as unknown as NotionMemberProperties;
           memberName = memberProperties.Name.title[0]?.plain_text || '';
         }

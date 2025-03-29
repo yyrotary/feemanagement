@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { notion, MEMBER_DB_ID } from '@/lib/notion';
+import { notionClient, DATABASE_IDS } from '@/lib/notion';
 import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionMemberProperties {
@@ -12,8 +12,8 @@ interface NotionMemberProperties {
 
 export async function GET() {
   try {
-    const response = await notion.databases.query({
-      database_id: MEMBER_DB_ID,
+    const response = await notionClient.databases.query({
+      database_id: DATABASE_IDS.MEMBERS,
       sorts: [
         {
           property: 'Name',

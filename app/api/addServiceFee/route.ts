@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
-import { notion } from '@/lib/notion';
-
-const SERVICE_FEE_DB_ID = '1c47c9ec930b805fa2afe3716f9d7544';
+import { notionClient, DATABASE_IDS } from '@/lib/notion';
 
 export async function POST(request: Request) {
   try {
     const { date, memberId, amount, method } = await request.json();
 
     // Notion API를 사용하여 새 페이지 생성
-    const response = await notion.pages.create({
+    const response = await notionClient.pages.create({
       parent: {
-        database_id: SERVICE_FEE_DB_ID
+        database_id: DATABASE_IDS.SERVICE_FEES
       },
       properties: {
         // yyrotary 관계형 필드 설정

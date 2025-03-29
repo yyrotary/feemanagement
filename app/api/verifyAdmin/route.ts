@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
-import { notion } from '@/lib/notion';
-
-const MASTER_DB_ID = '1c57c9ec930b803785d5d88539c20a21';
+import { notionClient, DATABASE_IDS } from '@/lib/notion';
 
 export async function POST(request: Request) {
   try {
     const { password } = await request.json();
 
-    const response = await notion.databases.query({
-      database_id: MASTER_DB_ID,
+    const response = await notionClient.databases.query({
+      database_id: DATABASE_IDS.MASTER_INFO,
       filter: {
         property: 'pass',
         rich_text: {

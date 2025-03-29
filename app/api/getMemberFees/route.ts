@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { notion, MEMBER_DB_ID, FEE_DB_ID } from '@/lib/notion';
+import { notionClient, DATABASE_IDS } from '@/lib/notion';
 import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionMemberProperties {
@@ -39,8 +39,8 @@ export async function POST(request: Request) {
     //console.log('Searching for phone:', phone);
 
     // 회원 정보 조회
-    const memberResponse = await notion.databases.query({
-      database_id: MEMBER_DB_ID,
+    const memberResponse = await notionClient.databases.query({
+      database_id: DATABASE_IDS.MEMBERS,
       filter: {
         property: 'phone',
         number: {
@@ -74,8 +74,8 @@ export async function POST(request: Request) {
     //console.log('Required fee:', requiredFee);
 
     // 회비 내역 조회
-    const feeResponse = await notion.databases.query({
-      database_id: FEE_DB_ID,
+    const feeResponse = await notionClient.databases.query({
+      database_id: DATABASE_IDS.FEES,
       filter: {
         property: 'name',
         relation: {
@@ -106,6 +106,7 @@ export async function POST(request: Request) {
     const remainingFee = Math.max(0, requiredFee - totalPaid);
 
     return NextResponse.json({
+      id: member.id,
       name,
       totalPaid,
       remainingFee,

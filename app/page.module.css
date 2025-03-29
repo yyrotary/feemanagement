@@ -191,21 +191,53 @@
 }
 
 .adminLink {
-  position: absolute;
+  position: fixed;
   top: 1rem;
-  right: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
 }
 
 .adminButton {
-  padding: 0.8rem 1.5rem;
-  background-color: #666;
-  color: white;
+  padding: 0.5rem 1rem;
+  background-color: transparent;
+  color: #666;
+  border: none;
+  font-size: 0.9rem;
   text-decoration: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  transition: background-color 0.2s;
+  opacity: 0.6;
+  transition: opacity 0.2s;
 }
 
 .adminButton:hover {
-  background-color: #444;
+  opacity: 1;
+}
+
+.feeTypeSelector {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0;
+  justify-content: center;
+}
+
+.feeTypeButton {
+  padding: 0.5rem 2rem;
+  border: 2px solid #0051A1;
+  background-color: white;
+  color: #0051A1;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.feeTypeButton.active {
+  background-color: #0051A1;
+  color: white;
+}
+
+.feeTypeButton:hover {
+  background-color: #003d7a;
+  color: white;
+  border-color: #003d7a;
 }

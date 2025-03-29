@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import styles from './page.module.css';
 import Link from 'next/link';
+import SpecialFeeSection from './components/SpecialFeeSection';
 
 interface FeeHistory {
   date: string;
@@ -11,6 +12,7 @@ interface FeeHistory {
 }
 
 interface MemberData {
+  id: string;
   name: string;
   totalPaid: number;
   remainingFee: number;
@@ -21,6 +23,7 @@ export default function Home() {
   const [phone, setPhone] = useState('');
   const [memberData, setMemberData] = useState<MemberData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showSpecialFee, setShowSpecialFee] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +41,7 @@ export default function Home() {
       const data = await response.json();
       if (response.ok) {
         setMemberData(data);
+        setShowSpecialFee(false);
       } else {
         alert(data.error || '데이터를 불러오는데 실패했습니다.');
       }
@@ -88,35 +92,59 @@ export default function Home() {
         <div className={styles.result}>
           <h2>{memberData.name} 회원님의 회비 현황</h2>
           
-          <div className={styles.summaryContainer}>
-            <div className={`${styles.summaryBox} ${styles.totalPaid}`}>
-              <h3>납부 총액</h3>
-              <p>{memberData.totalPaid.toLocaleString()}원</p>
-            </div>
-            <div className={`${styles.summaryBox} ${styles.remainingFee}`}>
-              <h3>미납 총액</h3>
-              <p>{memberData.remainingFee.toLocaleString()}원</p>
-            </div>
+          <div className={styles.feeTypeSelector}>
+            <button 
+              className={`${styles.feeTypeButton} ${!showSpecialFee ? styles.active : ''}`}
+              onClick={() => setShowSpecialFee(false)}
+            >
+              일반회비
+            </button>
+            <button 
+              className={`${styles.feeTypeButton} ${showSpecialFee ? styles.active : ''}`}
+              onClick={() => setShowSpecialFee(true)}
+            >
+              특별회비
+            </button>
           </div>
-          
-          <table className={styles.feeTable}>
-            <thead>
-              <tr>
-                <th>날짜</th>
-                <th>납부금액</th>
-                <th>납부수단</th>
-              </tr>
-            </thead>
-            <tbody>
-              {memberData.feeHistory.map((fee: FeeHistory, index: number) => (
-                <tr key={index}>
-                  <td>{fee.date}</td>
-                  <td>{fee.paid_fee.toLocaleString()}원</td>
-                  <td>{fee.method.join(', ')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+          {!showSpecialFee ? (
+            <>
+              <div className={styles.summaryContainer}>
+                <div className={`${styles.summaryBox} ${styles.totalPaid}`}>
+                  <h3>납부 총액</h3>
+                  <p>{memberData.totalPaid.toLocaleString()}원</p>
+                </div>
+                <div className={`${styles.summaryBox} ${styles.remainingFee}`}>
+                  <h3>미납 총액</h3>
+                  <p>{memberData.remainingFee.toLocaleString()}원</p>
+                </div>
+              </div>
+              
+              <table className={styles.feeTable}>
+                <thead>
+                  <tr>
+                    <th>날짜</th>
+                    <th>납부금액</th>
+                    <th>납부수단</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {memberData.feeHistory.map((fee: FeeHistory, index: number) => (
+                    <tr key={index}>
+                      <td>{fee.date}</td>
+                      <td>{fee.paid_fee.toLocaleString()}원</td>
+                      <td>{fee.method.join(', ')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <SpecialFeeSection 
+              memberId={memberData.id}
+              memberName={memberData.name}
+            />
+          )}
         </div>
       )}
     </main>

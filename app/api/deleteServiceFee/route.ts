@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { notion } from '@/lib/notion';
+import { notionClient } from '@/lib/notion';
 
 export async function POST(request: Request) {
   try {
@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     
     console.log('Attempting to delete record:', recordId);
 
-    const response = await notion.pages.update({
+    const response = await notionClient.pages.update({
       page_id: recordId,
       archived: true,
       properties: {} // 빈 properties 객체 추가
