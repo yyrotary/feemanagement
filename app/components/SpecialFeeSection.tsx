@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SpecialEvent, SpecialFee, SpecialFeeCalculation } from '../types/specialFee';
+import { SpecialFeeCalculation } from '../types/specialFee';
 import styles from './SpecialFeeSection.module.css';
 import Image from 'next/image';
 
