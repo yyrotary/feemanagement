@@ -2,6 +2,31 @@ import { NextResponse } from 'next/server';
 import { notion } from '@/lib/notion';
 import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 
+interface NotionProperties {
+  yyrotary: {
+    relation: Array<{ id: string }>;
+  };
+  date: {
+    date: {
+      start: string;
+    };
+  };
+  paid: {
+    number: number;
+  };
+  method: {
+    multi_select: Array<{ name: string }>;
+  };
+}
+
+interface NotionMemberProperties {
+  Name: {
+    title: Array<{
+      plain_text: string;
+    }>;
+  };
+}
+
 const SERVICE_FEE_DB_ID = '1c47c9ec930b805fa2afe3716f9d7544';
 
 export async function GET(request: Request) {
@@ -24,18 +49,19 @@ export async function GET(request: Request) {
           }
         ]
       },
-      page_size: 100 // 페이지 크기 증가
+      page_size: 100
     });
 
     const fees = await Promise.all(response.results.map(async (page) => {
       const pageObj = page as PageObjectResponse;
-      const properties = pageObj.properties as any;
+      const properties = pageObj.properties as NotionProperties;
       const memberId = properties.yyrotary?.relation[0]?.id;
       
       let memberName = '';
       if (memberId) {
         const memberPage = await notion.pages.retrieve({ page_id: memberId });
-        memberName = (memberPage as any).properties.Name.title[0]?.plain_text || '';
+        const memberProperties = (memberPage as PageObjectResponse).properties as NotionMemberProperties;
+        memberName = memberProperties.Name.title[0]?.plain_text || '';
       }
 
       return {
