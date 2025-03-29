@@ -57,6 +57,7 @@ export default function ServiceFeeSection({ memberId, date }: ServiceFeeSectionP
             throw new Error(errorData.error || '봉사금 내역을 불러오는데 실패했습니다.');
           } catch (e) {
             // JSON 파싱 실패 시 상태 코드와 함께 에러 메시지 표시
+            console.error('Error fetching service fee data:', e);
             throw new Error(`봉사금 내역을 불러오는데 실패했습니다. (${response.status})`);
           }
         }
