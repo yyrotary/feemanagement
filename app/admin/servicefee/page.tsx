@@ -69,7 +69,7 @@ export default function ServiceFeePage() {
       }
     };
 
-    const timeoutId = setTimeout(loadServiceFees, 300); // 300ms 디바운스
+    const timeoutId = setTimeout(loadServiceFees, 300);
     return () => clearTimeout(timeoutId);
   }, [date]);
 
