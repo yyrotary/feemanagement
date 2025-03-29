@@ -14,7 +14,7 @@ interface ServiceFeeSectionProps {
   nickname?: string;
 }
 
-export default function ServiceFeeSection({ memberId, memberName, nickname }: ServiceFeeSectionProps) {
+export default function ServiceFeeSection({ memberId }: ServiceFeeSectionProps) {
   const [fees, setFees] = useState<ServiceFee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
