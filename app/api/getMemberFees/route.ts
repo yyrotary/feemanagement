@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { notion, MEMBER_DB_ID, FEE_DB_ID } from '@/lib/notion';
-import { PageObjectResponse, DatabaseObjectResponse } from '@notionhq/client/build/src/api-endpoints';
+import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionMemberProperties {
   Name: {
