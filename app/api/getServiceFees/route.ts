@@ -4,23 +4,28 @@ import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionProperties {
   yyrotary: {
+    type: 'relation';
     relation: Array<{ id: string }>;
   };
   date: {
+    type: 'date';
     date: {
       start: string;
     };
   };
   paid: {
+    type: 'number';
     number: number;
   };
   method: {
+    type: 'multi_select';
     multi_select: Array<{ name: string }>;
   };
 }
 
 interface NotionMemberProperties {
   Name: {
+    type: 'title';
     title: Array<{
       plain_text: string;
     }>;
@@ -53,25 +58,31 @@ export async function GET(request: Request) {
     });
 
     const fees = await Promise.all(response.results.map(async (page) => {
-      const pageObj = page as PageObjectResponse;
-      const properties = pageObj.properties as NotionProperties;
-      const memberId = properties.yyrotary?.relation[0]?.id;
-      
-      let memberName = '';
-      if (memberId) {
-        const memberPage = await notion.pages.retrieve({ page_id: memberId });
-        const memberProperties = (memberPage as PageObjectResponse).properties as NotionMemberProperties;
-        memberName = memberProperties.Name.title[0]?.plain_text || '';
-      }
+      try {
+        const pageObj = page as PageObjectResponse;
+        const properties = pageObj.properties as unknown as NotionProperties;
+        
+        const memberId = properties.yyrotary?.relation[0]?.id;
+        let memberName = '';
 
-      return {
-        id: pageObj.id,
-        memberId,
-        memberName,
-        amount: properties.paid?.number || 0,
-        method: properties.method?.multi_select[0]?.name.toLowerCase() || '',
-        date: properties.date?.date?.start || date
-      };
+        if (memberId) {
+          const memberPage = await notion.pages.retrieve({ page_id: memberId });
+          const memberProperties = (memberPage as PageObjectResponse).properties as unknown as NotionMemberProperties;
+          memberName = memberProperties.Name.title[0]?.plain_text || '';
+        }
+
+        return {
+          id: pageObj.id,
+          memberId,
+          memberName,
+          amount: properties.paid?.number || 0,
+          method: (properties.method?.multi_select[0]?.name || '').toLowerCase() as 'cash' | 'card' | 'deposit',
+          date: properties.date?.date?.start || date
+        };
+      } catch (error) {
+        console.error('Error processing record:', error);
+        return null;
+      }
     }));
 
     return NextResponse.json(fees.filter(Boolean));
