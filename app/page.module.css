@@ -28,6 +28,16 @@
   line-height: 1.3;
 }
 
+.title1 {
+  color: #0051A1;
+  font-size: 1.5rem;
+  margin: 0;
+  font-weight: bold;
+  line-height: 1.3;
+  text-align: center;
+  
+}
+
 .form {
   margin: 2rem 0;
   display: flex;
@@ -37,6 +47,7 @@
   padding: 1.5rem;
   border-radius: 8px;
   align-items: center;
+  position: relative;
 }
 
 .input {
@@ -240,4 +251,11 @@
   background-color: #003d7a;
   color: white;
   border-color: #003d7a;
+}
+
+.inputHelp {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 0;
+  text-align: center;
 }

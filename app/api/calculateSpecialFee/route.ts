@@ -29,6 +29,15 @@ interface NotionEventProperties {
       name: string;
     }>;
   };
+  nick: {
+    rollup: {
+      array: Array<{
+        rich_text: Array<{
+          plain_text: string;
+        }>;
+      }>;
+    };
+  };
 }
 
 interface NotionMemberProperties {
@@ -102,10 +111,12 @@ export async function GET(request: Request) {
       const eventsList = pageProperties.events?.multi_select?.map(item => item.name) || [];
       const events = eventsList.join(', ');
       const isPersonal = memberName ? memberNameFromDb === memberName : false;
+      const nickname = pageProperties.nick?.rollup?.array[0]?.rich_text[0]?.plain_text || '';
       
       return {
         id: page.id,
         name: memberNameFromDb,
+        nickname,
         date,
         events,
         isPersonal,

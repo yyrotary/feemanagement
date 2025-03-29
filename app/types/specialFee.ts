@@ -1,6 +1,7 @@
 export interface SpecialEvent {
   id: string;
   name: string;
+  nickname: string;
   date: string;
   events: string;
   isPersonal: boolean;

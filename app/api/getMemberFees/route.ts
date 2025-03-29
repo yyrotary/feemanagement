@@ -8,6 +8,11 @@ interface NotionMemberProperties {
       plain_text: string;
     }>;
   };
+  nick: {
+    rich_text: Array<{
+      plain_text: string;
+    }>;
+  };
   deduction: {
     multi_select: Array<{
       id: string;
@@ -62,6 +67,7 @@ export async function POST(request: Request) {
     //console.log('All properties:', JSON.stringify(properties, null, 2));
 
     const name = properties.Name.title[0].plain_text;
+    const nickname = properties.nick?.rich_text?.[0]?.plain_text || '';
 
     //console.log('Deduction field:', properties.deduction);  // 필드 이름 확인
 
@@ -108,6 +114,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       id: member.id,
       name,
+      nickname,
       totalPaid,
       remainingFee,
       feeHistory

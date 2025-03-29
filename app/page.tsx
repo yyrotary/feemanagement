@@ -14,6 +14,7 @@ interface FeeHistory {
 interface MemberData {
   id: string;
   name: string;
+  nickname: string;
   totalPaid: number;
   remainingFee: number;
   feeHistory: FeeHistory[];
@@ -42,6 +43,7 @@ export default function Home() {
       if (response.ok) {
         setMemberData(data);
         setShowSpecialFee(false);
+        setPhone('');
       } else {
         alert(data.error || '데이터를 불러오는데 실패했습니다.');
       }
@@ -86,11 +88,12 @@ export default function Home() {
         <button type="submit" disabled={loading} className={styles.button}>
           {loading ? '조회중...' : '조회하기'}
         </button>
+        <p className={styles.inputHelp}>권민혁 회원은 휴대번호 앞 4자리 입력</p>
       </form>
 
       {memberData && (
         <div className={styles.result}>
-          <h2>{memberData.name} 회원님의 회비 현황</h2>
+          <h2 className={styles.title1}>{memberData.nickname ? `${memberData.nickname} ` : ''}{memberData.name} 회원님의 회비 현황</h2>
           
           <div className={styles.feeTypeSelector}>
             <button 
@@ -143,6 +146,7 @@ export default function Home() {
             <SpecialFeeSection 
               memberId={memberData.id}
               memberName={memberData.name}
+              nickname={memberData.nickname}
             />
           )}
         </div>

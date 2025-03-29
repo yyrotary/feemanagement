@@ -5,9 +5,10 @@ import styles from './SpecialFeeSection.module.css';
 interface SpecialFeeSectionProps {
   memberId: string;
   memberName: string;
+  nickname?: string;
 }
 
-export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSectionProps) {
+export default function SpecialFeeSection({ memberId, memberName, nickname }: SpecialFeeSectionProps) {
   const [calculation, setCalculation] = useState<SpecialFeeCalculation | null>(null);
   const [fees, setFees] = useState<SpecialFee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +96,9 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
               {calculation.events.map((event) => (
                 <li key={event.id} className={styles.eventItem}>
                   <span className={styles.eventDate}>{event.date}</span>
-                  <span className={styles.eventName}>{event.name}</span>
+                  <span className={styles.eventName}>
+                    {event.nickname ? `${event.nickname} ` : ''}{event.name}
+                  </span>
                   <span className={styles.eventType}>{event.events}</span>
                 </li>
               ))}
