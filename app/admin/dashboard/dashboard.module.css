@@ -1,0 +1,49 @@
+.container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+  text-align: center;
+}
+
+.menuGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.menuItem {
+  padding: 2rem;
+  background-color: #0051A1;
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.menuItem:hover {
+  background-color: #003d7a;
+}
+
+.backButton {
+  display: inline-block;
+  padding: 1rem 2rem;
+  background-color: #666;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  margin-top: 2rem;
+  transition: background-color 0.2s;
+}
+
+.backButton:hover {
+  background-color: #444;
+}
+
+@media (max-width: 600px) {
+  .menuGrid {
+    grid-template-columns: 1fr;
+  }
+}

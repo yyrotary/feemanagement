@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import styles from './page.module.css';
+import Link from 'next/link';
 
 interface FeeHistory {
   date: string;
@@ -51,6 +52,11 @@ export default function Home() {
   return (
     <main className={styles.main}>
       <div className={styles.header}>
+        <div className={styles.adminLink}>
+          <Link href="/admin" className={styles.adminButton}>
+            재무로그인
+          </Link>
+        </div>
         <Image 
           src="/rotary-logo.png"
           alt="영양로타리클럽 로고"
