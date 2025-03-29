@@ -8,7 +8,7 @@ interface SpecialFeeSectionProps {
   nickname?: string;
 }
 
-export default function SpecialFeeSection({ memberId, memberName, nickname }: SpecialFeeSectionProps) {
+export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSectionProps) {
   const [calculation, setCalculation] = useState<SpecialFeeCalculation | null>(null);
   const [fees, setFees] = useState<SpecialFee[]>([]);
   const [loading, setLoading] = useState(true);
