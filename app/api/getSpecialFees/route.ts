@@ -1,5 +1,46 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS } from '@/lib/notion';
+import { 
+  PageObjectResponse,
+  PartialPageObjectResponse,
+  DatabaseObjectResponse,
+  PartialDatabaseObjectResponse
+} from '@notionhq/client/build/src/api-endpoints';
+
+interface NotionFeeProperties {
+  name: {
+    relation: Array<{
+      id: string;
+    }>;
+  };
+  paid_fee: {
+    number: number;
+  };
+  date: {
+    date: {
+      start: string;
+    };
+  };
+  method: {
+    select: {
+      name: string;
+    };
+  };
+}
+
+interface NotionMemberProperties {
+  Name: {
+    title: Array<{
+      plain_text: string;
+    }>;
+  };
+}
+
+type NotionPage = PageObjectResponse | PartialPageObjectResponse | DatabaseObjectResponse | PartialDatabaseObjectResponse;
+
+function isFullPage(page: NotionPage): page is PageObjectResponse {
+  return 'properties' in page;
+}
 
 export async function GET(request: Request) {
   try {
@@ -20,12 +61,17 @@ export async function GET(request: Request) {
       },
     });
 
-    const fees = response.results.map((page: any) => {
+    const fees = response.results.map((page) => {
+      if (!isFullPage(page)) {
+        throw new Error('Invalid page object from Notion API');
+      }
+      const properties = page.properties as unknown as NotionFeeProperties;
+
       // 회원 정보 페이지에서 이름 가져오기
-      const nameRelation = page.properties?.name?.relation?.[0];
-      const amount = page.properties?.paid_fee?.number || 0;
-      const date = page.properties?.date?.date?.start || '';
-      const method = page.properties?.method?.select?.name?.toLowerCase() || 'cash';
+      const nameRelation = properties.name?.relation?.[0];
+      const amount = properties.paid_fee?.number || 0;
+      const date = properties.date?.date?.start || '';
+      const method = properties.method?.select?.name?.toLowerCase() || 'cash';
 
       return {
         id: page.id,
@@ -40,7 +86,11 @@ export async function GET(request: Request) {
     const feePromises = fees.map(async (fee) => {
       if (fee.eventName) {
         const memberPage = await notionClient.pages.retrieve({ page_id: fee.eventName });
-        const memberName = (memberPage as any).properties?.Name?.title?.[0]?.plain_text || '';
+        if (!isFullPage(memberPage)) {
+          throw new Error('Invalid member page from Notion API');
+        }
+        const memberProperties = memberPage.properties as unknown as NotionMemberProperties;
+        const memberName = memberProperties.Name?.title?.[0]?.plain_text || '';
         return {
           ...fee,
           eventName: memberName,
@@ -54,6 +104,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ fees: feesWithNames });
   } catch (error) {
     console.error('Error fetching special fees:', error);
-    return NextResponse.json({ error: 'Failed to fetch special fees' }, { status: 500 });
+    return NextResponse.json({ 
+      error: '특별회비 내역을 가져오는데 실패했습니다.',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 } 

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { SpecialEvent, SpecialFee, SpecialFeeCalculation } from '../types/specialFee';
+import { SpecialFee, SpecialFeeCalculation } from '../types/specialFee';
 import styles from './SpecialFeeSection.module.css';
-import Image from 'next/image';
 
 interface SpecialFeeSectionProps {
   memberId: string;
