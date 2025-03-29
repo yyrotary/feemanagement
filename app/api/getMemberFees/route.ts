@@ -31,8 +31,6 @@ interface NotionFeeProperties {
   };
 }
 
-type NotionPage = PageObjectResponse | DatabaseObjectResponse;
-
 export async function POST(request: Request) {
   try {
     const { phone } = await request.json();
