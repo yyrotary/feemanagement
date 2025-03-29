@@ -4,6 +4,7 @@ import Image from 'next/image';
 import styles from './page.module.css';
 import Link from 'next/link';
 import SpecialFeeSection from './components/SpecialFeeSection';
+import ServiceFeeSection from './components/ServiceFeeSection';
 
 interface FeeHistory {
   date: string;
@@ -24,7 +25,7 @@ export default function Home() {
   const [phone, setPhone] = useState('');
   const [memberData, setMemberData] = useState<MemberData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showSpecialFee, setShowSpecialFee] = useState(false);
+  const [feeType, setFeeType] = useState<'general' | 'special' | 'service'>('general');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,7 +43,7 @@ export default function Home() {
       const data = await response.json();
       if (response.ok) {
         setMemberData(data);
-        setShowSpecialFee(false);
+        setFeeType('general');
         setPhone('');
       } else {
         alert(data.error || '데이터를 불러오는데 실패했습니다.');
@@ -94,23 +95,30 @@ export default function Home() {
       {memberData && (
         <div className={styles.result}>
           <h2 className={styles.title1}>{memberData.nickname ? `${memberData.nickname} ` : ''}{memberData.name} 회원님의 회비 현황</h2>
+          <p className={styles.accountInfo}>입금계좌: 농협 713014-51-076725 (영양로타리클럽)</p>
           
           <div className={styles.feeTypeSelector}>
             <button 
-              className={`${styles.feeTypeButton} ${!showSpecialFee ? styles.active : ''}`}
-              onClick={() => setShowSpecialFee(false)}
+              className={`${styles.feeTypeButton} ${feeType === 'general' ? styles.active : ''}`}
+              onClick={() => setFeeType('general')}
             >
               일반회비
             </button>
             <button 
-              className={`${styles.feeTypeButton} ${showSpecialFee ? styles.active : ''}`}
-              onClick={() => setShowSpecialFee(true)}
+              className={`${styles.feeTypeButton} ${feeType === 'special' ? styles.active : ''}`}
+              onClick={() => setFeeType('special')}
             >
               특별회비
             </button>
+            <button 
+              className={`${styles.feeTypeButton} ${feeType === 'service' ? styles.active : ''}`}
+              onClick={() => setFeeType('service')}
+            >
+              봉사금
+            </button>
           </div>
 
-          {!showSpecialFee ? (
+          {feeType === 'general' ? (
             <>
               <div className={styles.summaryContainer}>
                 <div className={`${styles.summaryBox} ${styles.totalPaid}`}>
@@ -142,8 +150,14 @@ export default function Home() {
                 </tbody>
               </table>
             </>
-          ) : (
+          ) : feeType === 'special' ? (
             <SpecialFeeSection 
+              memberId={memberData.id}
+              memberName={memberData.name}
+              nickname={memberData.nickname}
+            />
+          ) : (
+            <ServiceFeeSection 
               memberId={memberData.id}
               memberName={memberData.name}
               nickname={memberData.nickname}

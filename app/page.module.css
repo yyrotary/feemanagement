@@ -28,6 +28,13 @@
   line-height: 1.3;
 }
 
+.accountInfo {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0.5rem 0 0 0;
+  text-align: center;
+}
+
 .title1 {
   color: #0051A1;
   font-size: 1.5rem;

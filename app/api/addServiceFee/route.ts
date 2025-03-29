@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       },
       properties: {
         // yyrotary 관계형 필드 설정
-        yyrotary: {
+        name: {
           relation: [
             {
               id: memberId
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
             start: date
           }
         },
-        paid: {
+        paid_fee: {
           number: amount
         },
         method: {
