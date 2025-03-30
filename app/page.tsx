@@ -116,7 +116,6 @@ export default function Home() {
             >
               봉사금
             </button>
-            
           </div>
           <p className={styles.accountInfo}>입금계좌: 농협 713014-51-076725 (영양로타리클럽)</p>
 

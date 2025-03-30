@@ -38,7 +38,17 @@ export default function AdminLogin() {
 
   return (
     <div className={styles.container}>
-      <h1>재무 로그인</h1>
+      <div className={styles.header}>
+        <div className={styles.logoWrapper}>
+          <img 
+            src="/rotary-logo.png"
+            alt="영양로타리클럽 로고"
+            className={styles.logo}
+          />
+        </div>
+        <h1 className={styles.title}>재무 로그인</h1>
+      </div>
+      
       <form onSubmit={handleSubmit} className={styles.form}>
         <input
           type="password"

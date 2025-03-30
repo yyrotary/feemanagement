@@ -35,6 +35,9 @@ export default function ServiceFeePage() {
   const [records, setRecords] = useState<ServiceFeeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<typeof METHODS[number] | null>(null);
+  const [showMemberSelection, setShowMemberSelection] = useState(false);
 
   useEffect(() => {
     const cachedMembers = sessionStorage.getItem('members');
@@ -97,8 +100,14 @@ export default function ServiceFeePage() {
     return () => clearTimeout(timeoutId);
   }, [date]);
 
-  const handleMemberSelect = async (amount: number, method: typeof METHODS[number], memberId: string) => {
-    if (!memberId || isSubmitting) return;
+  const handleCellClick = (amount: number, method: typeof METHODS[number]) => {
+    setSelectedAmount(amount);
+    setSelectedMethod(method);
+    setShowMemberSelection(true);
+  };
+
+  const handleMemberSelect = async (memberId: string) => {
+    if (!selectedAmount || !selectedMethod || !memberId || isSubmitting) return;
 
     const member = members.find(m => m.id === memberId);
     if (!member) return;
@@ -108,7 +117,12 @@ export default function ServiceFeePage() {
       const response = await fetch('/api/addServiceFee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date, memberId, amount, method }),
+        body: JSON.stringify({ 
+          date, 
+          memberId, 
+          amount: selectedAmount, 
+          method: selectedMethod 
+        }),
       });
 
       if (!response.ok) throw new Error('봉사금 기록 실패');
@@ -118,14 +132,26 @@ export default function ServiceFeePage() {
         id: data.id,
         memberId,
         memberName: member.name,
-        amount,
-        method
+        amount: selectedAmount,
+        method: selectedMethod
       }]);
+      
+      // 선택 초기화 및 회원 선택 화면 닫기
+      setSelectedAmount(null);
+      setSelectedMethod(null);
+      setShowMemberSelection(false);
     } catch (error) {
       console.error('Error adding service fee:', error);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // 닫기 버튼 핸들러 추가
+  const handleCloseSelection = () => {
+    setSelectedAmount(null);
+    setSelectedMethod(null);
+    setShowMemberSelection(false);
   };
 
   const handleDeleteRecord = async (record: ServiceFeeRecord) => {
@@ -173,6 +199,16 @@ export default function ServiceFeePage() {
 
   if (loading) return <div className={styles.container}>회원 목록을 불러오는 중...</div>;
 
+  // 회원 이름을 3열로 정렬하기 위해 배열 재구성
+  const sortedMembers = [...members].sort((a, b) => a.name.localeCompare(b.name));
+  const memberColumns = [[], [], []] as Member[][];
+  const itemsPerColumn = Math.ceil(sortedMembers.length / 3);
+  
+  sortedMembers.forEach((member, index) => {
+    const columnIndex = Math.floor(index / itemsPerColumn);
+    memberColumns[columnIndex].push(member);
+  });
+
   return (
     <div className={styles.container}>
       <h1>주회 기록지</h1>
@@ -186,6 +222,7 @@ export default function ServiceFeePage() {
         />
       </div>
 
+      {/* 금액 및 납부 방법 표 */}
       <table className={styles.feeTable}>
         <thead>
           <tr>
@@ -198,21 +235,14 @@ export default function ServiceFeePage() {
         <tbody>
           {AMOUNTS.map(amount => (
             <tr key={amount}>
-              <td>{amount.toLocaleString()}원</td>
+              <td className={styles.amountCell}>{amount.toLocaleString()}원</td>
               {METHODS.map(method => (
-                <td key={method}>
-                  <select
-                    onChange={(e) => handleMemberSelect(amount, method, e.target.value)}
-                    value=""
-                    className={styles.memberSelect}
-                  >
-                    <option value="">회원 선택</option>
-                    {members.map(member => (
-                      <option key={member.id} value={member.id}>
-                        {member.name}
-                      </option>
-                    ))}
-                  </select>
+                <td 
+                  key={method} 
+                  className={styles.methodCell}
+                  onClick={() => handleCellClick(amount, method)}
+                >
+                  회원 선택
                 </td>
               ))}
             </tr>
@@ -220,13 +250,49 @@ export default function ServiceFeePage() {
         </tbody>
       </table>
 
+      {/* 회원 선택 모달 */}
+      {showMemberSelection && selectedAmount && selectedMethod && (
+        <div className={styles.memberSelectionModal}>
+          <div className={styles.memberSelectionContent}>
+            <div className={styles.memberSelectionHeader}>
+              <h3>회원 선택 (금액: {selectedAmount.toLocaleString()}원, 방법: {
+                selectedMethod === 'cash' ? '현금' : selectedMethod === 'card' ? '카드' : '입금'
+              })</h3>
+              <button 
+                className={styles.closeButton}
+                onClick={handleCloseSelection}
+              >
+                ✕
+              </button>
+            </div>
+            <div className={styles.memberColumnsContainer}>
+              {memberColumns.map((column, columnIndex) => (
+                <div key={columnIndex} className={styles.memberColumn}>
+                  {column.map(member => (
+                    <div
+                      key={member.id}
+                      className={styles.memberItem}
+                      onClick={() => handleMemberSelect(member.id)}
+                    >
+                      {member.name}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {records.length > 0 && (
         <div className={styles.summary}>
           <h2>기록된 봉사금</h2>
           <div className={styles.recordsList}>
             {records.map((record, index) => (
               <div key={index} className={styles.recordItem}>
-                <span>{record.memberName}: {record.amount.toLocaleString()}원 ({record.method})</span>
+                <span>{record.memberName}: {record.amount.toLocaleString()}원 ({
+                  record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : '입금'
+                })</span>
                 <button 
                   onClick={() => handleDeleteRecord(record)}
                   className={styles.deleteButton}
