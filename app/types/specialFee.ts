@@ -12,7 +12,7 @@ export interface SpecialFee {
   amount: number;
   date: string;
   eventName: string;
-  method?: 'cash' | 'card';
+  method: string[];
 }
 
 export interface SpecialFeeCalculation {

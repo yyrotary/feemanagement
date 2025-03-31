@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import styles from './ServiceFeeSection.module.css';
 
+// 금액 포맷 함수 추가
+const formatNumber = (number: number | undefined): string => {
+  if (number === undefined) return '0';
+  return number.toLocaleString();
+};
+
 interface ServiceFee {
   id: string;
   date: string;
   amount: number;
-  method: string;
+  method: string[];
 }
 
 interface ServiceFeeSectionProps {
@@ -15,11 +21,26 @@ interface ServiceFeeSectionProps {
   date?: string;
 }
 
+// 납부 방법 변환 함수
+const formatPaymentMethod = (methods: string[] | undefined): string => {
+  console.log('Service Fee methods received:', methods);
+  
+  if (!methods || methods.length === 0) return '입금';
+  
+  return methods.map(method => {
+    const lowerMethod = method.toLowerCase().trim();
+    if (lowerMethod === 'cash') return '현금';
+    if (lowerMethod === 'card') return '카드';
+    if (lowerMethod === 'deposit') return '입금';
+    return method;
+  }).join(', ');
+};
+
 export default function ServiceFeeSection({ memberId, date }: ServiceFeeSectionProps) {
   const [fees, setFees] = useState<ServiceFee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const REQUIRED_SERVICE_FEE = 540000;
+  const REQUIRED_SERVICE_FEE = 500000;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,8 +62,6 @@ export default function ServiceFeeSection({ memberId, date }: ServiceFeeSectionP
         if (date) {
           queryParams.append('date', date);
         }
-
-        console.log('Fetching service fees with params:', queryParams.toString());
         
         const response = await fetch(`/api/getServiceFees?${queryParams.toString()}`);
         
@@ -63,7 +82,6 @@ export default function ServiceFeeSection({ memberId, date }: ServiceFeeSectionP
         }
 
         const data = await response.json();
-        console.log('API response data:', data);
         
         // fees 배열이 있는지 확인
         if (Array.isArray(data.fees)) {
@@ -104,15 +122,15 @@ export default function ServiceFeeSection({ memberId, date }: ServiceFeeSectionP
         {/* 납부 총액 */}
         <div className={styles.paidAmount}>
           <h3>납부 봉사금</h3>
-          <p>{totalPaid.toLocaleString()}원</p>
+          <p>{formatNumber(totalPaid)}원</p>
         </div>
 
         {/* 미납 총액 */}
         <div className={styles.unpaidAmount}>
           <h3>미납 봉사금</h3>
           <p>
-            {remainingFee.toLocaleString()}원
-            <span className={styles.requiredFee}>(의무봉사금 {REQUIRED_SERVICE_FEE.toLocaleString()}원)</span>
+            {formatNumber(remainingFee)}원
+            <span className={styles.requiredFee}>(의무봉사금 {formatNumber(REQUIRED_SERVICE_FEE)}원)</span>
           </p>
         </div>
       </div>
@@ -129,10 +147,16 @@ export default function ServiceFeeSection({ memberId, date }: ServiceFeeSectionP
             <ul className={styles.list}>
               {fees.map((fee) => (
                 <li key={fee.id} className={styles.paymentItem}>
-                  <span>{fee.date}</span>
-                  <span className={styles.paymentAmount}>{fee.amount.toLocaleString()}원</span>
-                  <span className={`${styles.paymentMethod} ${styles[fee.method || '']}`}>
-                    {fee.method}
+                  <span className={styles.paymentDate}>
+                    {new Date(fee.date).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                    }).replace(/\. /g, '.').replace(/\.$/, '')}
+                  </span>
+                  <span className={styles.paymentAmount}>{formatNumber(fee.amount)}원</span>
+                  <span className={styles.paymentMethod}>
+                    {formatPaymentMethod(fee.method)}
                   </span>
                 </li>
               ))}

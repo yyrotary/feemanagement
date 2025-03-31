@@ -130,12 +130,15 @@
   border-collapse: collapse;
   margin-top: 1.5rem;
   font-size: 1.1rem;
+  table-layout: fixed;
 }
 
 .feeTable th,
 .feeTable td {
   padding: 1rem;
   text-align: center;
+  word-break: keep-all;
+  white-space: nowrap;
 }
 
 .feeTable th {
@@ -184,6 +187,7 @@
     overflow-x: auto;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
   }
 
   .feeTable th,

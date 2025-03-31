@@ -20,9 +20,9 @@ interface NotionFeeProperties {
     };
   };
   method: {
-    select: {
+    multi_select: Array<{
       name: string;
-    };
+    }>;
   };
 }
 
@@ -145,13 +145,16 @@ export async function GET(request: Request) {
         }
       }
 
+      const methods = properties.method?.multi_select?.map(m => m.name) || ['cash'];
+      console.log('Service Fee methods from Notion:', methods);
+
       return {
         id: pageObj.id,
         memberId,
         memberName,
         amount: properties.paid_fee?.number || 0,
         date: properties.date?.date?.start || '',
-        method: properties.method?.select?.name?.toLowerCase() || 'cash',
+        method: methods,
       };
     });
 

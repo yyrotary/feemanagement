@@ -101,10 +101,12 @@ export async function POST(request: Request) {
     const feeHistory = feeResponse.results.map((fee) => {
       const feePage = fee as PageObjectResponse;
       const feeProperties = feePage.properties as unknown as NotionFeeProperties;
+      const method = feeProperties.method.multi_select.map(m => m.name);
+      console.log('General Fee method from Notion:', method, typeof method);
       return {
         date: feeProperties.date.date.start,
         paid_fee: feeProperties.paid_fee.number,
-        method: feeProperties.method.multi_select.map(m => m.name)
+        method
       };
     });
 

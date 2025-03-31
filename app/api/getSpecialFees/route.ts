@@ -22,9 +22,9 @@ interface NotionFeeProperties {
     };
   };
   method: {
-    select: {
+    multi_select: Array<{
       name: string;
-    };
+    }>;
   };
 }
 
@@ -71,14 +71,16 @@ export async function GET(request: Request) {
       const nameRelation = properties.name?.relation?.[0];
       const amount = properties.paid_fee?.number || 0;
       const date = properties.date?.date?.start || '';
-      const method = properties.method?.select?.name?.toLowerCase() || 'cash';
+      const methods = properties.method?.multi_select?.map(m => m.name) || ['cash'];
+      
+      console.log('Special Fee methods from Notion:', methods);
 
       return {
         id: page.id,
         amount,
         date,
         eventName: nameRelation ? nameRelation.id : '',  // 임시로 ID 저장
-        method,
+        method: methods,
       };
     });
 

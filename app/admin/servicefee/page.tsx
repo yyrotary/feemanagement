@@ -96,8 +96,8 @@ export default function ServiceFeePage() {
       }
     };
 
-    const timeoutId = setTimeout(loadServiceFees, 300);
-    return () => clearTimeout(timeoutId);
+    loadServiceFees();
+    return () => {};
   }, [date]);
 
   const handleCellClick = (amount: number, method: typeof METHODS[number]) => {
@@ -128,13 +128,15 @@ export default function ServiceFeePage() {
       if (!response.ok) throw new Error('봉사금 기록 실패');
 
       const data = await response.json();
-      setRecords(prev => [...prev, {
+      // 로컬 상태 즉시 업데이트하여 새로고침 필요 없게 함
+      const newRecord = {
         id: data.id,
         memberId,
         memberName: member.name,
         amount: selectedAmount,
         method: selectedMethod
-      }]);
+      };
+      setRecords(prev => [...prev, newRecord]);
       
       // 선택 초기화 및 회원 선택 화면 닫기
       setSelectedAmount(null);
