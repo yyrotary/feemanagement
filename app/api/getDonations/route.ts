@@ -73,7 +73,7 @@ export async function GET(request: Request) {
       const memberResponse = await notionClient.pages.retrieve({
         page_id: properties.name.relation[0].id,
       });
-      const memberProperties = (memberResponse as PageObjectResponse).properties as unknown as NotionMemberProperties;
+      //const memberProperties = (memberResponse as PageObjectResponse).properties as unknown as NotionMemberProperties;
 
       return {
         id: page.id,
