@@ -29,7 +29,7 @@ interface NotionDonationProperties {
   };
 }
 
-interface NotionMemberProperties {
+/* interface NotionMemberProperties {
   Name: {
     title: Array<{
       plain_text: string;
@@ -40,7 +40,7 @@ interface NotionMemberProperties {
       plain_text: string;
     }>;
   };
-}
+} */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const memberId = searchParams.get('memberId');
@@ -70,9 +70,9 @@ export async function GET(request: Request) {
       const properties = (page as PageObjectResponse).properties as unknown as NotionDonationProperties;
       
       // 회원 정보 가져오기
-      const memberResponse = await notionClient.pages.retrieve({
-        page_id: properties.name.relation[0].id,
-      });
+      //const memberResponse = await notionClient.pages.retrieve({
+      //  page_id: properties.name.relation[0].id,
+      //});
       //const memberProperties = (memberResponse as PageObjectResponse).properties as unknown as NotionMemberProperties;
 
       return {
