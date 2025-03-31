@@ -5,6 +5,7 @@ import styles from './page.module.css';
 import Link from 'next/link';
 import SpecialFeeSection from './components/SpecialFeeSection';
 import ServiceFeeSection from './components/ServiceFeeSection';
+import DonationSection from './components/DonationSection';
 
 interface FeeHistory {
   date: string;
@@ -25,7 +26,7 @@ export default function Home() {
   const [phone, setPhone] = useState('');
   const [memberData, setMemberData] = useState<MemberData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [feeType, setFeeType] = useState<'general' | 'special' | 'service'>('general');
+  const [feeType, setFeeType] = useState<'general' | 'special' | 'service' | 'donation'>('general');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +97,6 @@ export default function Home() {
         <div className={styles.result}>
           <h2 className={styles.title1}>{memberData.nickname ? `${memberData.nickname} ` : ''}{memberData.name} 회원님의 회비 현황</h2>
           
-          
           <div className={styles.feeTypeSelector}>
             <button 
               className={`${styles.feeTypeButton} ${feeType === 'general' ? styles.active : ''}`}
@@ -115,6 +115,12 @@ export default function Home() {
               onClick={() => setFeeType('service')}
             >
               봉사금
+            </button>
+            <button 
+              className={`${styles.feeTypeButton} ${feeType === 'donation' ? styles.active : ''}`}
+              onClick={() => setFeeType('donation')}
+            >
+              기부
             </button>
           </div>
           <p className={styles.accountInfo}>입금계좌: 농협 713014-51-076725 (영양로타리클럽)</p>
@@ -157,8 +163,14 @@ export default function Home() {
               memberName={memberData.name}
               nickname={memberData.nickname}
             />
-          ) : (
+          ) : feeType === 'service' ? (
             <ServiceFeeSection 
+              memberId={memberData.id}
+              memberName={memberData.name}
+              nickname={memberData.nickname}
+            />
+          ) : (
+            <DonationSection 
               memberId={memberData.id}
               memberName={memberData.name}
               nickname={memberData.nickname}

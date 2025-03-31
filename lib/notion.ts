@@ -13,6 +13,9 @@ export const SERVICE_FEE_DB_ID = '1c47c9ec930b805fa2afe3716f9d7544';
 export const SPECIAL_EVENTS_DB_ID = '1c47c9ec930b80f8a459f14ff17b32b6';
 export const SPECIAL_FEES_DB_ID = '1c47c9ec930b800e85ebc172be283abe';
 
+// 기부 관련 데이터베이스 ID
+export const DONATIONS_DB_ID = '1c47c9ec930b80d88b18c578d7cc9f4a';
+
 // 데이터베이스 ID를 객체로 정리 (새로운 방식)
 export const DATABASE_IDS = {
   MEMBERS: MEMBER_DB_ID,
@@ -20,7 +23,8 @@ export const DATABASE_IDS = {
   SERVICE_FEES: SERVICE_FEE_DB_ID,
   SPECIAL_EVENTS: SPECIAL_EVENTS_DB_ID,
   SPECIAL_FEES: SPECIAL_FEES_DB_ID,
-  MASTER_INFO: MASTER_DB_ID
+  MASTER_INFO: MASTER_DB_ID,
+  DONATIONS: DONATIONS_DB_ID
 };
 
 // Notion 클라이언트 인스턴스 생성 (새로운 변수명)
