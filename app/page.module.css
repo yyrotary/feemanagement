@@ -237,49 +237,46 @@
 
 .feeTypeSelector {
   display: flex;
-  gap: 1rem;
-  margin: 2rem 0;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
   justify-content: center;
+  padding: 0 1rem;
 }
 
 .feeTypeButton {
-  padding: 0.8rem 0;
-  min-width: 120px;
-  border: 2px solid #0051A1;
+  flex: 0 1 auto;
+  min-width: 80px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   background-color: white;
-  color: #0051A1;
-  border-radius: 4px;
+  color: #4a5568;
+  font-size: 1rem;
   cursor: pointer;
-  font-size: 1.2rem;
-  font-weight: bold;
   transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.feeTypeButton.active {
-  background-color: #0051A1;
-  color: white;
 }
 
 .feeTypeButton:hover {
-  background-color: #e3f2fd;
-  color: #0051A1;
+  background-color: #f7fafc;
 }
 
-.feeTypeButton.active:hover {
-  background-color: #004080;
+.feeTypeButton.active {
+  background-color: #2b6cb0;
   color: white;
+  border-color: #2b6cb0;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .feeTypeSelector {
-    gap: 0.5rem;
+    padding: 0 0.5rem;
+    gap: 0.25rem;
   }
-  
+
   .feeTypeButton {
-    padding: 0.8rem 0;
-    min-width: 100px;
-    font-size: 1.1rem;
+    min-width: 70px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
   }
 }
 
