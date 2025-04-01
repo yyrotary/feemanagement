@@ -432,3 +432,98 @@
     font-size: 1.1rem;
   }
 }
+
+/* 사용자 지정 금액 입력 스타일 */
+.customAmountContainer {
+  margin: 1.5rem 0 2.5rem;
+}
+
+.customAmountWrapper {
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: #f5f5f5;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.customAmountTitle {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #0051A1;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.customAmountInput {
+  width: 100%;
+  padding: 0.8rem;
+  font-size: 1.1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.customMethodButtons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+}
+
+.customMethodButton {
+  padding: 0.8rem;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+}
+
+.customMethodButton:hover {
+  background-color: #0051A1;
+  color: white;
+  border-color: #0051A1;
+}
+
+@media (max-width: 768px) {
+  .customAmountWrapper {
+    padding: 1.2rem;
+  }
+  
+  .customAmountInput {
+    padding: 0.7rem;
+    font-size: 1rem;
+  }
+  
+  .customMethodButtons {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+  }
+  
+  .customMethodButton {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .customAmountWrapper {
+    padding: 1rem;
+  }
+  
+  .customAmountInput {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+  
+  .customMethodButtons {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .customMethodButton {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+}

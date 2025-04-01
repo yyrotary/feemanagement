@@ -25,7 +25,7 @@ export const DATABASE_IDS = {
   SPECIAL_FEES: SPECIAL_FEES_DB_ID,
   MASTER_INFO: MASTER_DB_ID,
   DONATIONS: DONATIONS_DB_ID
-};
+} as const;
 
 // Notion 클라이언트 인스턴스 생성 (새로운 변수명)
 export const notionClient = new Client({

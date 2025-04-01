@@ -1,42 +1,47 @@
 'use client';
 
-import styles from './servicefee.module.css';
+import styles from './donation.module.css';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Member {
   id: string;
   name: string;
 }
 
-interface ServiceFeeRecord {
+interface DonationRecord {
   id: string;
   memberId: string;
   memberName: string;
-  amount: number;
+  paid_fee: number;
   method: 'cash' | 'card' | 'deposit';
+  class: string[];
 }
 
-interface ServiceFeeAPIResponse {
+interface DonationAPIResponse {
   id: string;
   date: string;
-  amount: number;
+  paid_fee: number;
   method: string[];
+  class: string[];
   memberId?: string;
   memberName?: string;
 }
 
-const AMOUNTS = [500000, 100000, 50000, 30000, 20000, 10000];
+const AMOUNTS = [1000000, 500000, 100000, 50000, 30000, 10000];
 const METHODS = ['cash', 'card', 'deposit'] as const;
+const CLASSES = ['PHF', 'EREY', '자선', '재난지원', '봉사인', '장학금'] as const;
 
-export default function ServiceFeePage() {
+export default function DonationPage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [records, setRecords] = useState<ServiceFeeRecord[]>([]);
+  const [records, setRecords] = useState<DonationRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<typeof METHODS[number] | null>(null);
+  const [selectedClass, setSelectedClass] = useState<typeof CLASSES[number] | null>(null);
   const [showMemberSelection, setShowMemberSelection] = useState(false);
 
   useEffect(() => {
@@ -66,24 +71,23 @@ export default function ServiceFeePage() {
   }, []);
 
   useEffect(() => {
-    const loadServiceFees = async () => {
+    const loadDonations = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/getServiceFees?date=${date}`);
-        if (!response.ok) throw new Error('봉사금 기록 로드 실패');
+        const response = await fetch(`/api/getDonations?date=${date}`);
+        if (!response.ok) throw new Error('기부 기록 로드 실패');
         const data = await response.json();
         
-        // API는 { fees: [...] } 형식으로 데이터를 반환
-        if (Array.isArray(data.fees)) {
+        // API는 { donations: [...] } 형식으로 데이터를 반환
+        if (Array.isArray(data.donations)) {
           // 받은 데이터 구조를 컴포넌트에서 필요한 구조로 변환
-          const formattedRecords = data.fees.map((fee: ServiceFeeAPIResponse) => ({
-            id: fee.id,
-            memberId: fee.memberId || '',
-            memberName: fee.memberName || '회원',
-            amount: fee.amount || 0,
-            method: fee.method && fee.method.length > 0 
-              ? fee.method[0].toLowerCase() as 'cash' | 'card' | 'deposit'
-              : 'deposit'
+          const formattedRecords = data.donations.map((donation: DonationAPIResponse) => ({
+            id: donation.id,
+            memberId: donation.memberId || '',
+            memberName: donation.memberName || '회원',
+            paid_fee: donation.paid_fee || 0,
+            method: donation.method[0]?.toLowerCase() || 'deposit',
+            class: donation.class || []
           }));
           setRecords(formattedRecords);
         } else {
@@ -91,43 +95,53 @@ export default function ServiceFeePage() {
           setRecords([]);
         }
       } catch (err) {
-        console.error('Error loading service fees:', err);
+        console.error('Error loading donations:', err);
         setRecords([]);
       } finally {
         setLoading(false);
       }
     };
 
-    loadServiceFees();
-    return () => {};
+    loadDonations();
   }, [date]);
 
+  const handleClassSelect = (donationClass: typeof CLASSES[number]) => {
+    setSelectedClass(donationClass);
+  };
+
   const handleCellClick = (amount: number, method: typeof METHODS[number]) => {
+    if (!selectedClass) {
+      alert('기부 종류를 먼저 선택해주세요.');
+      return;
+    }
+    
     setSelectedAmount(amount);
     setSelectedMethod(method);
     setShowMemberSelection(true);
+    console.log('회원 선택 모달 표시', { amount, method, selectedClass, showMemberSelection: true });
   };
 
   const handleMemberSelect = async (memberId: string) => {
-    if (!selectedAmount || !selectedMethod || !memberId || isSubmitting) return;
+    if (!selectedAmount || !selectedMethod || !selectedClass || !memberId || isSubmitting) return;
 
     const member = members.find(m => m.id === memberId);
     if (!member) return;
 
     try {
       setIsSubmitting(true);
-      const response = await fetch('/api/addServiceFee', {
+      const response = await fetch('/api/addDonation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           date, 
           memberId, 
-          amount: selectedAmount, 
-          method: selectedMethod 
+          paid_fee: selectedAmount, 
+          method: selectedMethod,
+          class: selectedClass
         }),
       });
 
-      if (!response.ok) throw new Error('봉사금 기록 실패');
+      if (!response.ok) throw new Error('기부 기록 실패');
 
       const data = await response.json();
       // 로컬 상태 즉시 업데이트하여 새로고침 필요 없게 함
@@ -135,8 +149,9 @@ export default function ServiceFeePage() {
         id: data.id,
         memberId,
         memberName: member.name,
-        amount: selectedAmount,
-        method: selectedMethod
+        paid_fee: selectedAmount,
+        method: selectedMethod,
+        class: [selectedClass]
       };
       setRecords(prev => [...prev, newRecord]);
       
@@ -145,7 +160,7 @@ export default function ServiceFeePage() {
       setSelectedMethod(null);
       setShowMemberSelection(false);
     } catch (error) {
-      console.error('Error adding service fee:', error);
+      console.error('Error adding donation:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -158,9 +173,9 @@ export default function ServiceFeePage() {
     setShowMemberSelection(false);
   };
 
-  const handleDeleteRecord = async (record: ServiceFeeRecord) => {
+  const handleDeleteRecord = async (record: DonationRecord) => {
     try {
-      const response = await fetch('/api/deleteServiceFee', {
+      const response = await fetch('/api/deleteDonation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recordId: record.id }),
@@ -179,15 +194,22 @@ export default function ServiceFeePage() {
       cash: 0,
       card: 0,
       deposit: 0,
-      total: 0
+      total: 0,
+      classes: {} as Record<string, number>
     };
 
     // 레코드가 배열인지 확인하고 처리
     if (Array.isArray(records)) {
       records.forEach(record => {
-        if (record && record.method && typeof record.amount === 'number') {
-          totals[record.method] += record.amount;
-          totals.total += record.amount;
+        if (record && record.method && typeof record.paid_fee === 'number') {
+          totals[record.method] += record.paid_fee;
+          totals.total += record.paid_fee;
+          
+          // 기부 종류별 합계 계산
+          record.class.forEach(c => {
+            if (!totals.classes[c]) totals.classes[c] = 0;
+            totals.classes[c] += record.paid_fee;
+          });
         }
       });
     }
@@ -200,6 +222,11 @@ export default function ServiceFeePage() {
   const handleDateChange = (newDate: string) => {
     setDate(newDate);
   };
+
+  // console.log 추가하여 디버깅
+  useEffect(() => {
+    console.log('모달 상태 변경:', { showMemberSelection, selectedAmount, selectedMethod });
+  }, [showMemberSelection, selectedAmount, selectedMethod]);
 
   if (loading) return <div className={styles.container}>회원 목록을 불러오는 중...</div>;
 
@@ -215,7 +242,7 @@ export default function ServiceFeePage() {
 
   return (
     <div className={styles.container}>
-      <h1>주회 기록지</h1>
+      <h1>기부 기록</h1>
       <div className={styles.dateContainer}>
         <label>날짜: </label>
         <input
@@ -224,6 +251,21 @@ export default function ServiceFeePage() {
           onChange={(e) => handleDateChange(e.target.value)}
           className={styles.dateInput}
         />
+      </div>
+
+      {/* 기부 종류 선택 버튼 */}
+      <div className={styles.classSelectionContainer}>
+        <div className={styles.classButtons}>
+          {CLASSES.map(donationClass => (
+            <button
+              key={donationClass}
+              className={`${styles.classButton} ${selectedClass === donationClass ? styles.selectedClass : ''}`}
+              onClick={() => handleClassSelect(donationClass)}
+            >
+              {donationClass}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* 금액 및 납부 방법 표 */}
@@ -322,15 +364,16 @@ export default function ServiceFeePage() {
         </div>
       )}
 
+      {/* 기록된 기부 내역 */}
       {records.length > 0 && (
         <div className={styles.summary}>
-          <h2>기록된 봉사금</h2>
+          <h2>기록된 기부금</h2>
           <div className={styles.recordsList}>
             {records.map((record, index) => (
               <div key={index} className={styles.recordItem}>
-                <span>{record.memberName}: {record.amount.toLocaleString()}원 ({
+                <span>{record.memberName}: {record.paid_fee.toLocaleString()}원 ({
                   record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : '입금'
-                })</span>
+                }) - {record.class.join(', ')}</span>
                 <button 
                   onClick={() => handleDeleteRecord(record)}
                   className={styles.deleteButton}
@@ -342,10 +385,21 @@ export default function ServiceFeePage() {
           </div>
           
           <div className={styles.totals}>
-            <h3>봉사금 합계</h3>
+            <h3>기부금 합계</h3>
             <div>현금 합계: {totals.cash.toLocaleString()}원</div>
             <div>카드 합계: {totals.card.toLocaleString()}원</div>
             <div>입금 합계: {totals.deposit.toLocaleString()}원</div>
+            
+            {/* 기부 종류별 합계 표시 */}
+            {Object.entries(totals.classes).length > 0 && (
+              <div className={styles.classTotals}>
+                <h4>종류별 합계</h4>
+                {Object.entries(totals.classes).map(([className, amount]) => (
+                  <div key={className}>{className}: {amount.toLocaleString()}원</div>
+                ))}
+              </div>
+            )}
+            
             <div className={styles.grandTotal}>총 합계: {totals.total.toLocaleString()}원</div>
           </div>
         </div>
@@ -356,4 +410,4 @@ export default function ServiceFeePage() {
       </Link>
     </div>
   );
-}
+} 
