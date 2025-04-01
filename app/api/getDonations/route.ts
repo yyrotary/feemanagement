@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { notionClient } from '@/lib/notion';
 import { DATABASE_IDS } from '@/lib/notion';
-import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
+import { 
+  PageObjectResponse,
+  QueryDatabaseParameters
+} from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionDonationProperties {
   name: {
@@ -37,7 +40,7 @@ export async function GET(request: Request) {
 
   try {
     // 필터 옵션 설정
-    let filter: any;
+    let filter: QueryDatabaseParameters['filter'];
     
     if (memberId) {
       // 특정 회원의 기부 내역 조회
@@ -55,9 +58,6 @@ export async function GET(request: Request) {
           equals: date,
         },
       };
-    } else {
-      // 모든 기부 내역 조회 (날짜 정렬)
-      filter = undefined;
     }
 
     const response = await notionClient.databases.query({
@@ -87,12 +87,8 @@ export async function GET(request: Request) {
           memberId = properties.name.relation[0].id;
           const memberProperties = (memberResponse as PageObjectResponse).properties as unknown as NotionMemberProperties;
           
-          // 대소문자를 확인하여 'Name' 또는 'name' 속성 접근
           if (memberProperties.Name && memberProperties.Name.title && memberProperties.Name.title.length > 0) {
             memberName = memberProperties.Name.title[0].plain_text;
-          } else if (memberProperties['name'] && memberProperties['name'].title && memberProperties['name'].title.length > 0) {
-            // @ts-ignore
-            memberName = memberProperties['name'].title[0].plain_text;
           }
         } catch (error) {
           console.error('Error fetching member info:', error);

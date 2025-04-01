@@ -3,7 +3,7 @@
 import styles from './donation.module.css';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+//import Image from 'next/image';
 
 interface Member {
   id: string;
@@ -43,6 +43,7 @@ export default function DonationPage() {
   const [selectedMethod, setSelectedMethod] = useState<typeof METHODS[number] | null>(null);
   const [selectedClass, setSelectedClass] = useState<typeof CLASSES[number] | null>(null);
   const [showMemberSelection, setShowMemberSelection] = useState(false);
+  const [exchangeRate, setExchangeRate] = useState<number>(0);
 
   useEffect(() => {
     const cachedMembers = sessionStorage.getItem('members');
@@ -65,9 +66,21 @@ export default function DonationPage() {
       }
     }
 
+    async function loadExchangeRate() {
+      try {
+        const response = await fetch('/api/getMasterInfo');
+        if (!response.ok) throw new Error('환율 정보 로드 실패');
+        const data = await response.json();
+        setExchangeRate(data.exchange_rate || 0);
+      } catch (err) {
+        console.error('Error loading exchange rate:', err);
+      }
+    }
+
     if (!cachedMembers) {
       loadMembers();
     }
+    loadExchangeRate();
   }, []);
 
   useEffect(() => {
@@ -107,6 +120,23 @@ export default function DonationPage() {
 
   const handleClassSelect = (donationClass: typeof CLASSES[number]) => {
     setSelectedClass(donationClass);
+    
+    // PHF나 EREY 선택 시 자동 금액 계산 및 입금 방법 설정
+    if (donationClass === 'PHF') {
+      const amount = exchangeRate * 1000;
+      setSelectedAmount(amount);
+      setSelectedMethod('deposit');
+      setShowMemberSelection(true);
+    } else if (donationClass === 'EREY') {
+      const amount = exchangeRate * 100;
+      setSelectedAmount(amount);
+      setSelectedMethod('deposit');
+      setShowMemberSelection(true);
+    } else {
+      setSelectedAmount(null);
+      setSelectedMethod(null);
+      setShowMemberSelection(false);
+    }
   };
 
   const handleCellClick = (amount: number, method: typeof METHODS[number]) => {
@@ -118,7 +148,6 @@ export default function DonationPage() {
     setSelectedAmount(amount);
     setSelectedMethod(method);
     setShowMemberSelection(true);
-    console.log('회원 선택 모달 표시', { amount, method, selectedClass, showMemberSelection: true });
   };
 
   const handleMemberSelect = async (memberId: string) => {
