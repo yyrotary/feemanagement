@@ -102,13 +102,13 @@ export default function Home() {
               className={`${styles.feeTypeButton} ${feeType === 'general' ? styles.active : ''}`}
               onClick={() => setFeeType('general')}
             >
-              일반회비
+              연회비
             </button>
             <button 
               className={`${styles.feeTypeButton} ${feeType === 'special' ? styles.active : ''}`}
               onClick={() => setFeeType('special')}
             >
-              특별회비
+              경조사
             </button>
             <button 
               className={`${styles.feeTypeButton} ${feeType === 'service' ? styles.active : ''}`}
