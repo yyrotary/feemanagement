@@ -22,7 +22,7 @@ interface FeeResponse {
   memberId: string;
   memberName: string;
   paid_fee: number;
-  method: 'cash' | 'card' | 'deposit';
+  method: string[];
 }
 
 const METHODS = ['cash', 'card', 'deposit'] as const;
