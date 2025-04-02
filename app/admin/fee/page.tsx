@@ -34,6 +34,15 @@ interface FeeAPIResponse {
   memberName?: string;
 }
 
+interface SpecialFeeAPIResponse {
+  id: string;
+  date: string;
+  amount: number;
+  method: string[];
+  memberId?: string;
+  memberName?: string;
+}
+
 const AMOUNTS = [500000, 200000, 100000, 50000, 30000, 10000];
 const METHODS = ['cash', 'card', 'deposit'] as const;
 
@@ -108,7 +117,7 @@ export default function FeePage() {
         const data = await response.json();
         
         if (Array.isArray(data.fees)) {
-          const formattedRecords = data.fees.map((fee: any) => ({
+          const formattedRecords = data.fees.map((fee: SpecialFeeAPIResponse) => ({
             id: fee.id,
             memberId: fee.memberId || '',
             memberName: fee.memberName || '회원',
