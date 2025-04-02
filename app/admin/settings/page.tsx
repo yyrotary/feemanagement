@@ -8,6 +8,8 @@ interface MasterInfo {
   id: string;
   exchange_rate: number;
   specialevent_fee: number;
+  pass: string;
+  sdonation: number;
 }
 
 export default function SettingsPage() {
@@ -60,6 +62,8 @@ export default function SettingsPage() {
           id: settings.id,
           exchange_rate: settings.exchange_rate,
           specialevent_fee: settings.specialevent_fee,
+          pass: settings.pass,
+          sdonation: settings.sdonation,
         }),
       });
       
@@ -104,7 +108,7 @@ export default function SettingsPage() {
           <h2>오류 발생</h2>
           <p>{error}</p>
           <Link href="/admin/dashboard" className={styles.backButton}>
-            관리자 대시보드로 돌아가기
+            상위 메뉴로 돌아가기
           </Link>
         </div>
       </div>
@@ -155,7 +159,46 @@ export default function SettingsPage() {
             step="1000"
             required
           />
-          <p className={styles.helpText}>특별 행사 기본 비용을 설정합니다.</p>
+          <p className={styles.helpText}>경조사 기본 비용을 설정합니다.</p>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="pass" className={styles.label}>
+            비밀번호
+          </label>
+          <input
+            id="pass"
+            type="password"
+            className={styles.input}
+            value={settings?.pass || ''}
+            onChange={(e) => {
+              if (settings) {
+                setSettings({
+                  ...settings,
+                  pass: e.target.value
+                });
+              }
+            }}
+            required
+          />
+          <p className={styles.helpText}>관리자 접근을 위한 비밀번호를 설정합니다.</p>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="sdonation" className={styles.label}>
+            봉사인 (원)
+          </label>
+          <input
+            id="sdonation"
+            type="number"
+            className={styles.input}
+            value={settings?.sdonation || 0}
+            onChange={(e) => handleChange('sdonation', parseFloat(e.target.value))}
+            min="0"
+            step="1000"
+            required
+          />
+          <p className={styles.helpText}>봉사인 금액을 설정합니다.</p>
         </div>
 
         <div className={styles.buttonContainer}>

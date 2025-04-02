@@ -9,6 +9,14 @@ interface NotionMasterInfoProperties {
   specialevent_fee: {
     number: number;
   };
+  pass: {
+    rich_text: [{
+      plain_text: string;
+    }];
+  };
+  sdonation: {
+    number: number;
+  };
   // 필요한 다른 필드들 추가 가능
 }
 
@@ -31,6 +39,8 @@ export async function GET() {
       id: page.id, // 페이지 ID를 포함해 업데이트할 때 사용
       exchange_rate: properties.exchange_rate?.number || 0,
       specialevent_fee: properties.specialevent_fee?.number || 10000,
+      pass: properties.pass?.rich_text[0]?.plain_text || '',
+      sdonation: properties.sdonation?.number || 0,
       // 필요한 다른 필드들 추가 가능
     });
   } catch (error) {
