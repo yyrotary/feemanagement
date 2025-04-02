@@ -257,6 +257,16 @@ export default function DonationPage() {
     console.log('모달 상태 변경:', { showMemberSelection, selectedAmount, selectedMethod });
   }, [showMemberSelection, selectedAmount, selectedMethod]);
 
+  const formatNumber = (value: number) => {
+    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    const formattedValue = formatNumber(parseInt(value || '0'));
+    e.target.value = formattedValue;
+  };
+
   if (loading) return <div className={styles.container}>회원 목록을 불러오는 중...</div>;
 
   // 회원 이름을 3열로 정렬하기 위해 배열 재구성
@@ -271,7 +281,7 @@ export default function DonationPage() {
 
   return (
     <div className={styles.container}>
-      <h1>기부 기록</h1>
+      <h1>기부금 기록</h1>
       <div className={styles.dateContainer}>
         <label>날짜: </label>
         <input
@@ -330,10 +340,11 @@ export default function DonationPage() {
         <div className={styles.customAmountWrapper}>
           <h3 className={styles.customAmountTitle}>사용자 지정 금액</h3>
           <input 
-            type="number" 
-            placeholder="금액 직접 입력 (예: 50000)" 
+            type="text" 
+            placeholder="금액 직접 입력 (예: 500,000)" 
             className={styles.customAmountInput}
             id="customAmount"
+            onChange={handleAmountChange}
           />
           <div className={styles.customMethodButtons}>
             {METHODS.map(method => (
@@ -342,7 +353,7 @@ export default function DonationPage() {
                 className={styles.customMethodButton}
                 onClick={() => {
                   const amountInput = document.getElementById('customAmount') as HTMLInputElement;
-                  const customAmount = parseInt(amountInput.value);
+                  const customAmount = parseInt(amountInput.value.replace(/,/g, ''));
                   if (customAmount && customAmount > 0) {
                     handleCellClick(customAmount, method);
                     // 입력 필드 초기화
@@ -359,14 +370,74 @@ export default function DonationPage() {
         </div>
       </div>
 
+      {/* 전회원 EREY 버튼 */}
+      <div className={styles.allMemberEreyContainer}>
+        <button 
+          className={styles.allMemberEreyButton}
+          onClick={async () => {
+            if (!exchangeRate) {
+              alert('환율 정보를 불러올 수 없습니다.');
+              return;
+            }
+
+            const confirmed = window.confirm('모든 회원에 대해 EREY 기부를 기록하시겠습니까?');
+            if (!confirmed) return;
+
+            setIsSubmitting(true);
+            const amount = exchangeRate * 100;
+
+            try {
+              for (const member of members) {
+                await fetch('/api/addDonation', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    date, 
+                    memberId: member.id, 
+                    paid_fee: amount, 
+                    method: 'deposit',
+                    class: 'EREY'
+                  }),
+                });
+              }
+
+              // 페이지 새로고침
+              window.location.reload();
+            } catch (error) {
+              console.error('Error adding EREY donations:', error);
+              alert('전체 회원 EREY 기록 중 오류가 발생했습니다.');
+            } finally {
+              setIsSubmitting(false);
+            }
+          }}
+          disabled={isSubmitting}
+        >
+          전회원 EREY 기록
+        </button>
+      </div>
+
       {/* 회원 선택 모달 */}
-      {showMemberSelection && selectedAmount && selectedMethod && (
+      {showMemberSelection && selectedAmount && (
         <div className={styles.memberSelectionModal}>
           <div className={styles.memberSelectionContent}>
             <div className={styles.memberSelectionHeader}>
-              <h3>회원 선택 (금액: {selectedAmount.toLocaleString()}원, 방법: {
-                selectedMethod === 'cash' ? '현금' : selectedMethod === 'card' ? '카드' : '입금'
-              })</h3>
+              <div>
+                <h3>회원 선택 (금액: {selectedAmount.toLocaleString()}원)</h3>
+                {(selectedClass === 'PHF' || selectedClass === 'EREY') && (
+                  <div className={styles.methodSelection}>
+                    <span>납부 방법: </span>
+                    {METHODS.map(method => (
+                      <button
+                        key={method}
+                        className={`${styles.methodButton} ${selectedMethod === method ? styles.selected : ''}`}
+                        onClick={() => setSelectedMethod(method)}
+                      >
+                        {method === 'cash' ? '현금' : method === 'card' ? '카드' : '입금'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button 
                 className={styles.closeButton}
                 onClick={handleCloseSelection}

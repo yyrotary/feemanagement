@@ -1,0 +1,369 @@
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.container h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #0051A1;
+}
+
+.dateContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  font-size: 1.2rem;
+}
+
+.dateInput {
+  margin-left: 0.5rem;
+  padding: 0.5rem;
+  font-size: 1.2rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.feeTypeContainer {
+  margin: 1.5rem 0;
+}
+
+.feeTypeButtons {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.feeTypeButton {
+  padding: 0.6rem 1.2rem;
+  font-size: 1.1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 80px;
+}
+
+.feeTypeButton:hover {
+  background-color: #f0f9ff;
+  border-color: #0051A1;
+  color: #0051A1;
+}
+
+.feeTypeButton.selectedFeeType {
+  background-color: #0051A1;
+  color: white;
+  border-color: #0051A1;
+}
+
+.customAmountContainer {
+  margin: 1.5rem 0 2.5rem;
+}
+
+.customAmountWrapper {
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: #f5f5f5;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.customAmountInput {
+  width: 100%;
+  padding: 0.8rem;
+  font-size: 1.1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.customMethodButtons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+}
+
+.customMethodButton {
+  padding: 0.8rem;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+}
+
+.customMethodButton:hover {
+  background-color: #0051A1;
+  color: white;
+  border-color: #0051A1;
+}
+
+.customAmountTitle {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #0051A1;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.memberSelectionModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.memberSelectionContent {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.memberSelectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.memberSelectionHeader h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.memberColumnsContainer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.memberColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.memberItem {
+  padding: 0.6rem 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.memberItem:hover {
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0.2rem 0.5rem;
+}
+
+.closeButton:hover {
+  color: #333;
+}
+
+.summary {
+  margin: 3rem 0;
+}
+
+.summary h2 {
+  margin-bottom: 1.5rem;
+  color: #0051A1;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.recordsList {
+  margin-bottom: 2rem;
+}
+
+.recordItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem;
+  border-bottom: 1px solid #eee;
+  font-size: 1rem;
+}
+
+.recordItem span {
+  flex: 1;
+}
+
+.deleteButton {
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-left: 1rem;
+  transition: background-color 0.2s;
+}
+
+.deleteButton:hover {
+  background-color: #cc0000;
+}
+
+.totals {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.totals h3 {
+  margin-bottom: 1rem;
+  color: #0051A1;
+  text-align: center;
+  font-size: 1.3rem;
+}
+
+.totals div {
+  margin: 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.grandTotal {
+  margin-top: 1rem !important;
+  font-weight: bold;
+  font-size: 1.3rem !important;
+  color: #0051A1;
+}
+
+.backButton {
+  display: inline-block;
+  padding: 1rem 2rem;
+  background-color: #666;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  margin-top: 2rem;
+  transition: background-color 0.2s;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.backButton:hover {
+  background-color: #444;
+}
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem 0.5rem;
+  }
+
+  .dateContainer {
+    font-size: 1rem;
+  }
+
+  .dateInput {
+    font-size: 1rem;
+  }
+
+  .customAmountWrapper {
+    padding: 1.2rem;
+  }
+  
+  .customAmountInput {
+    padding: 0.7rem;
+    font-size: 1rem;
+  }
+  
+  .customMethodButtons {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+  }
+  
+  .customMethodButton {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+  }
+
+  .memberSelectionContent {
+    padding: 1.5rem;
+    width: 95%;
+  }
+
+  .memberColumnsContainer {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .recordItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .totals div {
+    font-size: 0.9rem;
+  }
+
+  .grandTotal {
+    font-size: 1.1rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .customAmountWrapper {
+    padding: 1rem;
+  }
+  
+  .customAmountInput {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+  
+  .customMethodButtons {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .customMethodButton {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .memberItem {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  .memberColumnsContainer {
+    grid-template-columns: repeat(3, 1fr);
+  }
+} 

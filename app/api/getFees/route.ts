@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { notionClient } from '@/lib/notion';
 import { DATABASE_IDS } from '@/lib/notion';
 
-interface NotionSpecialFeeProperties {
+interface NotionFeeProperties {
   name: { title: { plain_text: string } };
   paid_fee: { number: number };
   date: { date: { start: string } };
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     }
 
     const response = await notionClient.databases.query({
-      database_id: DATABASE_IDS.SPECIAL_FEES,
+      database_id: DATABASE_IDS.FEES,
       filter: {
         property: 'date',
         date: {
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     });
 
     const fees = response.results.map((page: any) => {
-      const properties = page.properties as NotionSpecialFeeProperties;
+      const properties = page.properties as NotionFeeProperties;
       return {
         id: page.id,
         date: properties.date.date.start,
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ fees });
   } catch (error) {
-    console.error('Error fetching special fees:', error);
-    return NextResponse.json({ error: '특별회비 조회 중 오류가 발생했습니다.' }, { status: 500 });
+    console.error('Error fetching fees:', error);
+    return NextResponse.json({ error: '회비 조회 중 오류가 발생했습니다.' }, { status: 500 });
   }
 } 

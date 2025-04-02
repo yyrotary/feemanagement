@@ -18,12 +18,20 @@ export default function Dashboard() {
       </div>
       <div className={styles.menuGrid}>
         <Link href="/admin/servicefee" className={styles.menuItem}>
-          <span className={styles.menuIcon}>📝</span>
-          <span className={styles.menuText}>봉사금 기록</span>
+          <div className={styles.menuIcon}>💰</div>
+          <div className={styles.menuText}>봉사금 기록</div>
         </Link>
         <Link href="/admin/donation" className={styles.menuItem}>
-          <span className={styles.menuIcon}>🎁</span>
-          <span className={styles.menuText}>기부금 기록</span>
+          <div className={styles.menuIcon}>🎁</div>
+          <div className={styles.menuText}>기부금 기록</div>
+        </Link>
+        <Link href="/admin/fee" className={styles.menuItem}>
+          <div className={styles.menuIcon}>💵</div>
+          <div className={styles.menuText}>회비 기록</div>
+        </Link>
+        <Link href="/admin/masterinfo" className={styles.menuItem}>
+          <div className={styles.menuIcon}>⚙️</div>
+          <div className={styles.menuText}>기본 정보 관리</div>
         </Link>
       </div>
       <Link href="/" className={styles.backButton}>
