@@ -29,6 +29,10 @@ export default function Dashboard() {
           <span className={styles.menuIcon}>🎁</span>
           <span className={styles.menuText}>기부금 기록</span>
         </Link>
+        <Link href="/admin/settings" className={styles.menuItem}>
+          <span className={styles.menuIcon}>⚙️</span>
+          <span className={styles.menuText}>설정</span>
+        </Link>
       </div>
       <Link href="/" className={styles.backButton}>
         메인으로 돌아가기
