@@ -1,35 +1,31 @@
 import { NextResponse } from 'next/server';
-import { notionClient } from '@/lib/notion';
-import { DATABASE_IDS } from '@/lib/notion';
+import { notionClient, DATABASE_IDS } from '@/lib/notion';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { date, memberId, paid_fee, method } = body;
+    const { date, memberId, paid_fee, method } = await request.json();
 
-    if (!date || !memberId || !paid_fee || !method) {
-      return NextResponse.json({ error: '필수 정보가 누락되었습니다.' }, { status: 400 });
-    }
-
+    // Notion API를 사용하여 새 페이지 생성
     const response = await notionClient.pages.create({
-      parent: { database_id: DATABASE_IDS.FEES },
+      parent: {
+        database_id: DATABASE_IDS.FEES
+      },
       properties: {
+        // 관계형 필드 설정
         name: {
-          title: [
+          relation: [
             {
-              text: {
-                content: memberId
-              }
+              id: memberId
             }
           ]
-        },
-        paid_fee: {
-          number: paid_fee
         },
         date: {
           date: {
             start: date
           }
+        },
+        paid_fee: {
+          number: paid_fee
         },
         method: {
           multi_select: [
@@ -41,9 +37,16 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json({ id: response.id });
+    // 생성된 페이지의 ID를 반환
+    return NextResponse.json({
+      id: response.id,
+      success: true
+    });
   } catch (error) {
     console.error('Error adding fee:', error);
-    return NextResponse.json({ error: '회비 기록 중 오류가 발생했습니다.' }, { status: 500 });
+    return NextResponse.json({ 
+      error: '회비 기록에 실패했습니다.',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 } 

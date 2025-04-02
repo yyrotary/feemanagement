@@ -257,16 +257,6 @@ export default function DonationPage() {
     console.log('모달 상태 변경:', { showMemberSelection, selectedAmount, selectedMethod });
   }, [showMemberSelection, selectedAmount, selectedMethod]);
 
-  const formatNumber = (value: number) => {
-    return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  };
-
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9]/g, '');
-    const formattedValue = formatNumber(parseInt(value || '0'));
-    e.target.value = formattedValue;
-  };
-
   if (loading) return <div className={styles.container}>회원 목록을 불러오는 중...</div>;
 
   // 회원 이름을 3열로 정렬하기 위해 배열 재구성
@@ -340,11 +330,10 @@ export default function DonationPage() {
         <div className={styles.customAmountWrapper}>
           <h3 className={styles.customAmountTitle}>사용자 지정 금액</h3>
           <input 
-            type="text" 
-            placeholder="금액 직접 입력 (예: 500,000)" 
+            type="number" 
+            placeholder="금액 직접 입력 (예: 50000)" 
             className={styles.customAmountInput}
             id="customAmount"
-            onChange={handleAmountChange}
           />
           <div className={styles.customMethodButtons}>
             {METHODS.map(method => (
@@ -353,7 +342,7 @@ export default function DonationPage() {
                 className={styles.customMethodButton}
                 onClick={() => {
                   const amountInput = document.getElementById('customAmount') as HTMLInputElement;
-                  const customAmount = parseInt(amountInput.value.replace(/,/g, ''));
+                  const customAmount = parseInt(amountInput.value);
                   if (customAmount && customAmount > 0) {
                     handleCellClick(customAmount, method);
                     // 입력 필드 초기화

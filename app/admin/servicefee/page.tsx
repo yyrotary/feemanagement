@@ -29,16 +29,6 @@ interface ServiceFeeAPIResponse {
 const AMOUNTS = [500000, 100000, 50000, 30000, 20000, 10000];
 const METHODS = ['cash', 'card', 'deposit'] as const;
 
-const formatNumber = (value: number) => {
-  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-};
-
-const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const value = e.target.value.replace(/[^0-9]/g, '');
-  const formattedValue = formatNumber(parseInt(value || '0'));
-  e.target.value = formattedValue;
-};
-
 export default function ServiceFeePage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -269,11 +259,10 @@ export default function ServiceFeePage() {
         <div className={styles.customAmountWrapper}>
           <h3 className={styles.customAmountTitle}>사용자 지정 금액</h3>
           <input 
-            type="text" 
-            placeholder="금액 직접 입력 (예: 500,000)" 
+            type="number" 
+            placeholder="금액 직접 입력 (예: 50000)" 
             className={styles.customAmountInput}
             id="customAmount"
-            onChange={handleAmountChange}
           />
           <div className={styles.customMethodButtons}>
             {METHODS.map(method => (
@@ -282,7 +271,7 @@ export default function ServiceFeePage() {
                 className={styles.customMethodButton}
                 onClick={() => {
                   const amountInput = document.getElementById('customAmount') as HTMLInputElement;
-                  const customAmount = parseInt(amountInput.value.replace(/,/g, ''));
+                  const customAmount = parseInt(amountInput.value);
                   if (customAmount && customAmount > 0) {
                     handleCellClick(customAmount, method);
                     // 입력 필드 초기화

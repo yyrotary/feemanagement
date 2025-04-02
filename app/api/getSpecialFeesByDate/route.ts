@@ -42,67 +42,30 @@ interface NotionMemberProperties {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const memberId = searchParams.get('memberId');
     const date = searchParams.get('date');
 
-    console.log('Request params:', { memberId, date });
+    if (!date) {
+      return NextResponse.json({ error: '날짜는 필수 입력값입니다.' }, { status: 400 });
+    }
 
-    // 필터와 쿼리 옵션 초기화
-    let filter: QueryDatabaseParameters['filter'] = undefined;
-    const queryOptions: QueryDatabaseParameters = {
-      database_id: DATABASE_IDS.FEES,
+    // 특별회비 데이터 조회
+    const response = await notionClient.databases.query({
+      database_id: DATABASE_IDS.SPECIAL_FEES,
+      filter: {
+        property: 'date',
+        date: {
+          equals: date
+        }
+      },
       sorts: [
         {
           property: 'date',
           direction: 'descending'
         }
       ]
-    };
+    });
 
-    // 필터 설정
-    if (memberId && date) {
-      // memberId와 date 모두 있는 경우
-      filter = {
-        and: [
-          {
-            property: 'name',
-            relation: {
-              contains: memberId
-            }
-          },
-          {
-            property: 'date',
-            date: {
-              equals: date
-            }
-          }
-        ]
-      };
-    } else if (memberId) {
-      // memberId만 있는 경우
-      filter = {
-        property: 'name',
-        relation: {
-          contains: memberId
-        }
-      };
-    } else if (date) {
-      // date만 있는 경우
-      filter = {
-        property: 'date',
-        date: {
-          equals: date
-        }
-      };
-    }
-
-    if (filter) {
-      queryOptions.filter = filter;
-    }
-
-    // 회비 데이터 조회
-    const response = await notionClient.databases.query(queryOptions);
-    console.log('Fee records count:', response.results.length);
+    console.log('Special Fee records count:', response.results.length);
 
     // 모든 회원 정보를 한 번에 가져오기
     const membersResponse = await notionClient.databases.query({
@@ -127,7 +90,7 @@ export async function GET(request: Request) {
       }
     });
 
-    // 회비 데이터에 회원 이름 매핑
+    // 특별회비 데이터에 회원 이름 매핑
     const fees = response.results.map(page => {
       const pageObj = page as PageObjectResponse;
       const properties = pageObj.properties as unknown as NotionFeeProperties;
@@ -146,13 +109,13 @@ export async function GET(request: Request) {
       }
 
       const methods = properties.method?.multi_select?.map(m => m.name) || ['deposit'];
-      console.log('Fee methods from Notion:', methods);
+      console.log('Special Fee methods from Notion:', methods);
 
       return {
         id: pageObj.id,
         memberId,
         memberName,
-        paid_fee: properties.paid_fee?.number || 0,
+        amount: properties.paid_fee?.number || 0,
         date: properties.date?.date?.start || '',
         method: methods,
       };
@@ -160,9 +123,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ fees });
   } catch (error) {
-    console.error('Error fetching fees:', error);
+    console.error('Error fetching special fees by date:', error);
     return NextResponse.json({ 
-      error: '회비 내역을 가져오는데 실패했습니다.',
+      error: '특별회비 내역을 가져오는데 실패했습니다.',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
