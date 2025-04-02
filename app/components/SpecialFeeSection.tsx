@@ -202,8 +202,8 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
       <section className={styles.section}>
         <div className={styles.paymentHeader}>
           <span>날짜</span>
-          <span>납부금액</span>
-          <span>납부수단</span>
+          <span>금액</span>
+          <span>납부</span>
         </div>
         <div className={styles.paymentList}>
           {fees && fees.length > 0 ? (
@@ -212,7 +212,7 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
                 <li key={fee.id} className={styles.paymentItem}>
                   <span className={styles.paymentDate}>
                     {new Date(fee.date).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
+                      year: '2-digit',
                       month: '2-digit',
                       day: '2-digit',
                     }).replace(/\. /g, '.').replace(/\.$/, '')}

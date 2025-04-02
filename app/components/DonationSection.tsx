@@ -93,10 +93,10 @@ export default function DonationSection({ memberId }: DonationSectionProps) {
         <h3 className={styles.sectionTitle}>기부 내역</h3>
         <div className={styles.paymentHeader}>
           <span>날짜</span>
-          <span>납부금액</span>
+          <span>금액</span>
           <span>종류</span>
-          <span>납부수단</span>
-          <span>우정기부</span>
+          <span>납부</span>
+          <span>우정</span>
         </div>
         <div className={styles.paymentList}>
           {donations && donations.length > 0 ? (
@@ -105,7 +105,7 @@ export default function DonationSection({ memberId }: DonationSectionProps) {
                 <li key={donation.id} className={styles.paymentItem}>
                   <span className={styles.paymentDate}>
                     {new Date(donation.date).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
+                      year: '2-digit',
                       month: '2-digit',
                       day: '2-digit',
                     }).replace(/\. /g, '.').replace(/\.$/, '')}
