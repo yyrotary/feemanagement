@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS } from '@/lib/notion';
-import { PageObjectResponse, QueryDatabaseParameters } from '@notionhq/client/build/src/api-endpoints';
+import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionDonationProperties {
   date: {
