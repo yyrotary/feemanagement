@@ -1,5 +1,13 @@
 import { NextResponse } from 'next/server';
 import { notionClient } from '@/lib/notion';
+import { PageObjectResponse, UpdatePageParameters } from '@notionhq/client/build/src/api-endpoints';
+
+interface NotionProperty {
+  type: 'title' | 'rich_text' | 'number';
+  title?: Array<{ plain_text: string }>;
+  rich_text?: Array<{ plain_text: string }>;
+  number?: number;
+}
 
 export async function PUT(request: Request) {
   try {
@@ -13,8 +21,8 @@ export async function PUT(request: Request) {
     }
 
     // 페이지 정보를 먼저 가져와서 필드 타입 확인
-    const page = await notionClient.pages.retrieve({ page_id: id });
-    const property = (page as any).properties[fieldName];
+    const page = (await notionClient.pages.retrieve({ page_id: id })) as PageObjectResponse;
+    const property = page.properties[fieldName] as NotionProperty;
 
     if (!property) {
       return NextResponse.json(
@@ -24,16 +32,14 @@ export async function PUT(request: Request) {
     }
 
     // 필드 타입에 따라 업데이트 객체 생성
-    const updateData: any = {
-      [fieldName]: {}
-    };
+    let properties: UpdatePageParameters['properties'] = {};
 
     if (property.type === 'title') {
-      updateData[fieldName] = {
+      properties[fieldName] = {
         title: [{ text: { content: value } }]
       };
     } else if (property.type === 'rich_text') {
-      updateData[fieldName] = {
+      properties[fieldName] = {
         rich_text: [{ text: { content: value } }]
       };
     } else if (property.type === 'number') {
@@ -44,14 +50,14 @@ export async function PUT(request: Request) {
           { status: 400 }
         );
       }
-      updateData[fieldName] = {
+      properties[fieldName] = {
         number: numberValue
       };
     }
 
     await notionClient.pages.update({
       page_id: id,
-      properties: updateData,
+      properties,
     });
 
     return NextResponse.json({ success: true });

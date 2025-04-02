@@ -4,8 +4,10 @@ import { DATABASE_IDS } from '@/lib/notion';
 import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionProperty {
-  type: string;
-  [key: string]: any;
+  type: 'title' | 'rich_text' | 'number';
+  title?: Array<{ plain_text: string }>;
+  rich_text?: Array<{ plain_text: string }>;
+  number?: number;
 }
 
 export async function GET() {
@@ -31,7 +33,7 @@ export async function GET() {
     for (const [key, value] of Object.entries(properties)) {
       const prop = value as NotionProperty;
       if (prop.type === 'title' || prop.type === 'rich_text') {
-        const textContent = prop[prop.type][0]?.plain_text || '';
+        const textContent = prop[prop.type]?.[0]?.plain_text || '';
         fields[key] = textContent;
       } else if (prop.type === 'number') {
         fields[key] = prop.number?.toString() || '';

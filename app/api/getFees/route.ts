@@ -1,54 +1,73 @@
 import { NextResponse } from 'next/server';
 import { notionClient } from '@/lib/notion';
 import { DATABASE_IDS } from '@/lib/notion';
+import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionFeeProperties {
-  name: { title: { plain_text: string } };
-  paid_fee: { number: number };
-  date: { date: { start: string } };
-  method: { multi_select: { name: string }[] };
+  name: {
+    title: Array<{
+      plain_text: string;
+    }>;
+  };
+  paid_fee: {
+    number: number;
+  };
+  date: {
+    date: {
+      start: string;
+    };
+  };
+  method: {
+    select: {
+      name: string;
+    };
+  };
 }
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date');
+    const memberId = searchParams.get('memberId');
 
-    if (!date) {
-      return NextResponse.json({ error: '날짜가 필요합니다.' }, { status: 400 });
+    if (!memberId) {
+      return NextResponse.json(
+        { error: '회원 ID가 필요합니다.' },
+        { status: 400 }
+      );
     }
 
     const response = await notionClient.databases.query({
       database_id: DATABASE_IDS.FEES,
       filter: {
-        property: 'date',
-        date: {
-          equals: date
-        }
+        property: 'name',
+        title: {
+          equals: memberId,
+        },
       },
       sorts: [
         {
           property: 'date',
-          direction: 'descending'
-        }
-      ]
+          direction: 'descending',
+        },
+      ],
     });
 
-    const fees = response.results.map((page: any) => {
-      const properties = page.properties as NotionFeeProperties;
+    const fees = response.results.map((page: PageObjectResponse) => {
+      const props = page.properties as NotionFeeProperties;
       return {
         id: page.id,
-        date: properties.date.date.start,
-        paid_fee: properties.paid_fee.number,
-        method: properties.method.multi_select.map(m => m.name),
-        memberId: properties.name.title[0]?.plain_text || '',
-        memberName: properties.name.title[0]?.plain_text || ''
+        amount: props.paid_fee.number,
+        date: props.date.date.start,
+        method: props.method.select.name,
       };
     });
 
-    return NextResponse.json({ fees });
+    return NextResponse.json(fees);
   } catch (error) {
     console.error('Error fetching fees:', error);
-    return NextResponse.json({ error: '회비 조회 중 오류가 발생했습니다.' }, { status: 500 });
+    return NextResponse.json(
+      { error: '회비 정보를 가져오는데 실패했습니다.' },
+      { status: 500 }
+    );
   }
 } 
