@@ -31,6 +31,8 @@
   padding: 1.5rem;
   margin-bottom: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  min-width: fit-content;
 }
 
 .sectionTitle {
@@ -41,7 +43,7 @@
 
 .paymentHeader {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 0.8fr 1fr 1.2fr 0.8fr 0.8fr;
   text-align: center;
   font-weight: bold;
   padding: 0.8rem 0;
@@ -54,6 +56,10 @@
 .paymentHeader span {
   text-align: center;
   color: #4a5568;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 0.5rem;
 }
 
 .list {
@@ -64,11 +70,18 @@
 
 .paymentItem {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 0.8fr 1fr 1.2fr 0.8fr 0.8fr;
   text-align: center;
   padding: 0.8rem 0;
   border-bottom: 1px solid #eee;
   font-size: 1.1rem;
+}
+
+.paymentItem span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 0.5rem;
 }
 
 .paymentItem:last-child {
@@ -97,6 +110,11 @@
   color: #2d3748;
 }
 
+.fromFriend {
+  text-align: center;
+  color: #4a5568;
+}
+
 .loading {
   text-align: center;
   padding: 2rem;
@@ -116,23 +134,53 @@
   font-size: 1.1rem;
 }
 
+.friendDonationCard {
+  background-color: #fff0f7;
+  border: 2px solid #b02b6c;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.friendDonationCard h3 {
+  color: #b02b6c;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+.friendDonationAmount {
+  color: #b02b6c;
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0;
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 0.5rem;
+  }
+
+  .section {
+    padding: 1rem;
   }
 
   .totalAmount {
     font-size: 1.5rem;
   }
 
-  .paymentItem {
-    font-size: 0.9rem;
-    padding: 0.5rem;
-    gap: 0.5rem;
+  .paymentHeader {
+    font-size: 1rem;
+    padding: 0.5rem 0;
   }
 
-  .paymentHeader {
-    padding: 0.5rem;
-    gap: 0.5rem;
+  .paymentItem {
+    font-size: 0.9rem;
+    padding: 0.5rem 0;
+  }
+
+  .paymentHeader span,
+  .paymentItem span {
+    padding: 0 0.3rem;
   }
 } 

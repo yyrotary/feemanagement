@@ -4,6 +4,7 @@ export interface Donation {
   paid_fee: number;
   class: string[];
   method: string[];
+  memberName?: string;
   from_friend?: {
     id: string;
     name: string;

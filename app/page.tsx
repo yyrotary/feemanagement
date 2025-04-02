@@ -142,8 +142,8 @@ export default function Home() {
                 <thead>
                   <tr>
                     <th>날짜</th>
-                    <th>납부금액</th>
-                    <th>납부수단</th>
+                    <th>금액</th>
+                    <th>수단</th>
                   </tr>
                 </thead>
                 <tbody>
