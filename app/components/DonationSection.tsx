@@ -96,6 +96,7 @@ export default function DonationSection({ memberId }: DonationSectionProps) {
           <span>납부금액</span>
           <span>종류</span>
           <span>납부수단</span>
+          <span>우정기부</span>
         </div>
         <div className={styles.paymentList}>
           {donations && donations.length > 0 ? (
@@ -117,6 +118,9 @@ export default function DonationSection({ memberId }: DonationSectionProps) {
                   </span>
                   <span className={styles.paymentMethod}>
                     {formatPaymentMethod(donation.method)}
+                  </span>
+                  <span className={styles.fromFriend}>
+                    {donation.from_friend?.name || '-'}
                   </span>
                 </li>
               ))}

@@ -4,6 +4,10 @@ export interface Donation {
   paid_fee: number;
   class: string[];
   method: string[];
+  from_friend?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface DonationResponse {

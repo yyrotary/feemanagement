@@ -22,6 +22,9 @@ interface NotionDonationProperties {
   method: {
     multi_select: { name: string }[];
   };
+  from_friend: {
+    relation: { id: string }[];
+  };
 }
 
 interface NotionMemberProperties {
@@ -76,6 +79,7 @@ export async function GET(request: Request) {
       
       let memberName = '회원';
       let memberId = '';
+      let fromFriend = undefined;
       
       // 회원 정보 가져오기 (relation 필드가 비어있지 않은 경우에만)
       if (properties.name.relation && properties.name.relation.length > 0) {
@@ -92,7 +96,26 @@ export async function GET(request: Request) {
           }
         } catch (error) {
           console.error('Error fetching member info:', error);
-          // 기본값은 이미 설정되어 있음
+        }
+      }
+
+      // 우정기부 회원 정보 가져오기
+      if (properties.from_friend?.relation && properties.from_friend.relation.length > 0) {
+        try {
+          const friendResponse = await notionClient.pages.retrieve({
+            page_id: properties.from_friend.relation[0].id,
+          });
+          
+          const friendProperties = (friendResponse as PageObjectResponse).properties as unknown as NotionMemberProperties;
+          
+          if (friendProperties.Name && friendProperties.Name.title && friendProperties.Name.title.length > 0) {
+            fromFriend = {
+              id: properties.from_friend.relation[0].id,
+              name: friendProperties.Name.title[0].plain_text
+            };
+          }
+        } catch (error) {
+          console.error('Error fetching friend info:', error);
         }
       }
 
@@ -103,7 +126,8 @@ export async function GET(request: Request) {
         class: properties.class.multi_select.map(item => item.name),
         method: properties.method.multi_select.map(item => item.name),
         memberId,
-        memberName
+        memberName,
+        from_friend: fromFriend
       };
     }));
 
