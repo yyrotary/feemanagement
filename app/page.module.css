@@ -133,26 +133,30 @@
   table-layout: fixed;
 }
 
-.feeTable th,
-.feeTable td {
-  padding: 1rem;
+.feeTable th {
   text-align: center;
-  word-break: keep-all;
-  white-space: nowrap;
+  font-weight: bold;
+  padding: 0.8rem 0;
+  border-bottom: 2px solid #0051A1;
+  margin-bottom: 0.8rem;
+  color: #0051A1;
+  font-size: 1.2rem;
+  background-color: transparent;
 }
 
-.feeTable th {
-  background-color: #0051A1;
-  color: white;
-  font-size: 1.2rem;
+.feeTable td {
+  text-align: center;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 1.1rem;
 }
 
 .feeTable tr:nth-child(even) {
-  background-color: #f9f9f9;
+  background-color: transparent;
 }
 
 .feeTable tr:hover {
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
 }
 
 @media (min-width: 768px) {
