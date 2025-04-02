@@ -2,8 +2,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './admin.module.css';
-import Link from 'next/link';
-import Image from 'next/image';
 
 export default function AdminLogin() {
   const [password, setPassword] = useState('');
@@ -40,74 +38,30 @@ export default function AdminLogin() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.loginBox}>
-        <div className={styles.logoContainer}>
-          <Image
-            src="/logo.png"
-            alt="로고"
-            width={200}
-            height={200}
-            priority
+      <div className={styles.header}>
+        <div className={styles.logoWrapper}>
+          <img 
+            src="/rotary-logo.png"
+            alt="영양로타리클럽 로고"
+            className={styles.logo}
           />
         </div>
-        <button onClick={() => router.push('/admin/dashboard')} className={styles.loginButton}>
-          관리자 메뉴로 들어가기
+        <h1 className={styles.title}>재무 로그인</h1>
+      </div>
+      
+      <form onSubmit={handleSubmit} className={styles.form}>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="비밀번호를 입력하세요"
+          className={styles.input}
+          disabled={loading}
+        />
+        <button type="submit" className={styles.button} disabled={loading}>
+          {loading ? '로그인 중...' : '로그인'}
         </button>
-      </div>
-    </div>
-  );
-}
-
-export function AdminPage() {
-  return (
-    <div className={styles.container}>
-      <h1>관리자 메뉴</h1>
-      <div className={styles.menuGrid}>
-        <Link href="/admin/fee" className={styles.menuItem}>
-          <div className={styles.menuIcon}>
-            <Image
-              src="/icons/fee.png"
-              alt="회비 아이콘"
-              width={48}
-              height={48}
-            />
-          </div>
-          <span>회비 기록</span>
-        </Link>
-        <Link href="/admin/servicefee" className={styles.menuItem}>
-          <div className={styles.menuIcon}>
-            <Image
-              src="/icons/service.png"
-              alt="봉사 아이콘"
-              width={48}
-              height={48}
-            />
-          </div>
-          <span>봉사 회비 기록</span>
-        </Link>
-        <Link href="/admin/donation" className={styles.menuItem}>
-          <div className={styles.menuIcon}>
-            <Image
-              src="/icons/donation.png"
-              alt="기부 아이콘"
-              width={48}
-              height={48}
-            />
-          </div>
-          <span>기부 기록</span>
-        </Link>
-        <Link href="/admin/masterinfo" className={styles.menuItem}>
-          <div className={styles.menuIcon}>
-            <Image
-              src="/icons/settings.png"
-              alt="설정 아이콘"
-              width={48}
-              height={48}
-            />
-          </div>
-          <span>기본 정보 관리</span>
-        </Link>
-      </div>
+      </form>
     </div>
   );
 }

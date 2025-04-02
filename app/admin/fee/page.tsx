@@ -307,7 +307,7 @@ export default function FeePage() {
               <div key={index} className={styles.recordItem}>
                 <span>{record.memberName}: {record.paid_fee.toLocaleString()}원 ({
                   record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : '입금'
-                })}</span>
+                })</span>
                 <button 
                   onClick={() => handleDeleteRecord(record)}
                   className={styles.deleteButton}
