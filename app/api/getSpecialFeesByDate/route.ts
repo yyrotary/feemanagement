@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS } from '@/lib/notion';
 import { 
-  PageObjectResponse, 
-  QueryDatabaseParameters 
+  PageObjectResponse 
+  
 } from '@notionhq/client/build/src/api-endpoints';
 
 interface NotionFeeProperties {
