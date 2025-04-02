@@ -72,7 +72,7 @@ export default function SettingsPage() {
         throw new Error(errorData.error || '설정 저장에 실패했습니다.');
       }
       
-      const result = await response.json();
+      await response.json();
       setSuccess('설정이 성공적으로 저장되었습니다.');
     } catch (err) {
       console.error('설정 저장 오류:', err);

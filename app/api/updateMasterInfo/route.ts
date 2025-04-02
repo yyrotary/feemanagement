@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { notionClient, DATABASE_IDS } from '@/lib/notion';
+import { notionClient } from '@/lib/notion';
 
 interface UpdateMasterInfoRequest {
   id: string;
@@ -19,7 +19,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 업데이트할 속성 객체 생성
-    const properties: Record<string, any> = {};
+    type NotionPropertyValue = 
+      | { number: number }
+      | { rich_text: Array<{ text: { content: string } }> };
+    
+    const properties: Record<string, NotionPropertyValue> = {};
 
     if (exchange_rate !== undefined) {
       properties.exchange_rate = {
