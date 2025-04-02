@@ -17,6 +17,14 @@ interface FeeRecord {
   method: 'cash' | 'card' | 'deposit';
 }
 
+interface FeeResponse {
+  id: string;
+  memberId: string;
+  memberName: string;
+  paid_fee: number;
+  method: 'cash' | 'card' | 'deposit';
+}
+
 const METHODS = ['cash', 'card', 'deposit'] as const;
 
 export default function FeePage() {
@@ -65,7 +73,7 @@ export default function FeePage() {
         const data = await response.json();
         
         if (Array.isArray(data.fees)) {
-          const formattedRecords = data.fees.map((fee: any) => ({
+          const formattedRecords = data.fees.map((fee: FeeResponse) => ({
             id: fee.id,
             memberId: fee.memberId || '',
             memberName: fee.memberName || '회원',

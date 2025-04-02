@@ -32,7 +32,7 @@ export async function PUT(request: Request) {
     }
 
     // 필드 타입에 따라 업데이트 객체 생성
-    let properties: UpdatePageParameters['properties'] = {};
+    const properties: UpdatePageParameters['properties'] = {};
 
     if (property.type === 'title') {
       properties[fieldName] = {
