@@ -43,7 +43,7 @@ interface SpecialFeeAPIResponse {
   memberName?: string;
 }
 
-const AMOUNTS = [500000, 200000, 100000, 50000, 30000, 10000];
+const AMOUNTS = [720000, 360000, 120000, 60000, 40000, 20000];
 const METHODS = ['cash', 'card', 'deposit'] as const;
 
 export default function FeePage() {
