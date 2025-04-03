@@ -4,6 +4,8 @@ import { Donation } from '@/app/types/donation';
 
 interface DonationSectionProps {
   memberId: string;
+  memberName: string;
+  nickname?: string;
 }
 
 export default function DonationSection({ memberId }: DonationSectionProps) {
