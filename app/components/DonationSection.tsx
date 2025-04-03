@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Donation } from '../types/donation';
 import styles from './DonationSection.module.css';
+import { Donation } from '@/app/types/donation';
 
 interface DonationSectionProps {
   memberId: string;
-  memberName: string;
-  nickname?: string;
 }
 
 export default function DonationSection({ memberId }: DonationSectionProps) {
@@ -113,7 +111,7 @@ export default function DonationSection({ memberId }: DonationSectionProps) {
       )}
 
       {/* 납부 내역 섹션 */}
-      
+      <section className={styles.section}>
         <h3 className={styles.sectionTitle}>기부 내역</h3>
         <div className={styles.paymentHeader}>
           <span>날짜</span>
@@ -153,17 +151,18 @@ export default function DonationSection({ memberId }: DonationSectionProps) {
             <p className={styles.emptyMessage}>기부 내역이 없습니다.</p>
           )}
         </div>
-      
+      </section>
       
       {/* 우정기부 내역 섹션 */}
-      
+      {friendDonations.length > 0 && (
+        <section className={`${styles.section} ${styles.friendDonationSection}`}>
           <h3 className={styles.sectionTitle}>우정기부 내역</h3>
           <div className={styles.paymentHeader}>
             <span>날짜</span>
             <span>금액</span>
             <span>종류</span>
             <span>납부</span>
-            <span>대상자</span>
+            <span>대상</span>
           </div>
           <div className={styles.paymentList}>
             <ul className={styles.list}>
@@ -192,7 +191,8 @@ export default function DonationSection({ memberId }: DonationSectionProps) {
               ))}
             </ul>
           </div>
-        
+        </section>
+      )}
     </div>
   );
 } 
