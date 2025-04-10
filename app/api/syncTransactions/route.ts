@@ -556,7 +556,7 @@ async function getTransactionEmails(
   pageToken?: string | null, 
   olderThanDate?: Date,
   sinceDate?: Date,
-  batchSize: number = 500  // 기본값 증가
+  batchSize: number = 5  // 기본값 증가
 ) {
   // 검색 쿼리 구성
   let query = 'from:nonghyupcorp.com OR from:webmaster@ums.nonghyup.com OR subject:"입출금" OR subject:"거래내역" OR subject:"계좌" OR subject:"농협"';
@@ -1310,7 +1310,7 @@ export async function GET(request: Request) {
     // 파라미터 변환
     let olderThanDate: Date | undefined;
     let sinceDate: Date | undefined;
-    let batchSize = 5000; // 기본 배치 크기 증가
+    let batchSize = 5; // 기본 배치 크기 증가
     
     if (olderThanParam) {
       try {
