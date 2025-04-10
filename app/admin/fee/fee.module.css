@@ -1,0 +1,464 @@
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.container h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #0051A1;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.dateContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  font-size: 1.2rem;
+}
+
+.dateInput {
+  margin-left: 0.5rem;
+  padding: 0.5rem;
+  font-size: 1.2rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.feeTypeSelector {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0;
+  justify-content: center;
+}
+
+.feeTypeButton {
+  padding: 0.8rem 0;
+  min-width: 120px;
+  border: 2px solid #0051A1;
+  background-color: white;
+  color: #0051A1;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: bold;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.feeTypeButton.active {
+  background-color: #0051A1;
+  color: white;
+}
+
+.feeTypeButton:hover {
+  background-color: #e3f2fd;
+  color: #0051A1;
+}
+
+.feeTypeButton.active:hover {
+  background-color: #004080;
+  color: white;
+}
+
+.feeTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+}
+
+.feeTable th {
+  background-color: #0051A1;
+  color: white;
+  padding: 0.8rem;
+  text-align: center;
+}
+
+.feeTable td {
+  padding: 0.8rem;
+  text-align: center;
+  border: 1px solid #ddd;
+}
+
+.amountCell {
+  font-weight: bold;
+  background-color: #f5f5f5;
+}
+
+.methodCell {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.methodCell:hover {
+  background-color: #e6f7ff;
+}
+
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.memberSelection {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 1.8rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.selectionTitle {
+  margin: 0;
+  margin-bottom: 1.5rem;
+  color: #0051A1;
+  text-align: left;
+  font-size: 1.3rem;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary {
+  margin: 3rem 0;
+}
+
+.summary h2 {
+  margin-bottom: 1.5rem;
+  color: #0051A1;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.recordsList {
+  margin-bottom: 2rem;
+}
+
+.recordItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem;
+  border-bottom: 1px solid #eee;
+  font-size: 1rem;
+}
+
+.recordItem span {
+  flex: 1;
+}
+
+.deleteButton {
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-left: 1rem;
+  transition: background-color 0.2s;
+}
+
+.deleteButton:hover {
+  background-color: #cc0000;
+}
+
+.totals {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.totals h3 {
+  margin-bottom: 1rem;
+  color: #0051A1;
+  text-align: center;
+  font-size: 1.3rem;
+}
+
+.totals div {
+  margin: 0.5rem 0;
+  font-size: 1.1rem;
+}
+
+.grandTotal {
+  margin-top: 1rem !important;
+  font-weight: bold;
+  font-size: 1.3rem !important;
+  color: #0051A1;
+}
+
+.backButton {
+  display: inline-block;
+  padding: 1rem 2rem;
+  background-color: #666;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  margin-top: 2rem;
+  transition: background-color 0.2s;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.backButton:hover {
+  background-color: #444;
+}
+
+/* 사용자 지정 금액 입력 스타일 */
+.customAmountContainer {
+  margin: 1.5rem 0 2.5rem;
+}
+
+.customAmountWrapper {
+  max-width: 600px;
+  margin: 0 auto;
+  background-color: #f5f5f5;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.customAmountTitle {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #0051A1;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.customAmountInput {
+  width: 100%;
+  padding: 0.8rem;
+  font-size: 1.1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.customMethodButtons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.8rem;
+}
+
+.customMethodButton {
+  padding: 0.8rem;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+}
+
+.customMethodButton:hover {
+  background-color: #0051A1;
+  color: white;
+  border-color: #0051A1;
+}
+
+/* 회원 선택 모달 스타일 */
+.memberSelectionModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.memberSelectionContent {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.memberSelectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.memberSelectionHeader h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0.2rem 0.5rem;
+}
+
+.closeButton:hover {
+  color: #333;
+}
+
+.memberColumnsContainer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.memberColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.memberItem {
+  padding: 0.6rem 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.memberItem:hover {
+  background-color: #e9ecef;
+  border-color: #dee2e6;
+}
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem 0.5rem;
+  }
+
+  .header {
+    flex-direction: column;
+  }
+
+  .dateContainer {
+    font-size: 1rem;
+  }
+
+  .dateInput {
+    font-size: 1rem;
+  }
+
+  .feeTypeSelector {
+    gap: 0.5rem;
+  }
+  
+  .feeTypeButton {
+    padding: 0.8rem 0;
+    min-width: 100px;
+    font-size: 1.1rem;
+  }
+
+  .feeTable th,
+  .feeTable td {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .recordItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .totals div {
+    font-size: 0.9rem;
+  }
+
+  .grandTotal {
+    font-size: 1.1rem !important;
+  }
+  
+  .customAmountWrapper {
+    padding: 1.2rem;
+  }
+  
+  .customAmountInput {
+    padding: 0.7rem;
+    font-size: 1rem;
+  }
+  
+  .customMethodButtons {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+  }
+  
+  .customMethodButton {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .customAmountWrapper {
+    padding: 1rem;
+  }
+  
+  .customAmountInput {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+  
+  .customMethodButtons {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .customMethodButton {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+  
+  .feeTypeButton {
+    padding: 0.6rem 0;
+    min-width: 90px;
+    font-size: 1rem;
+  }
+}

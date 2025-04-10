@@ -1,0 +1,234 @@
+.container {
+  width: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.totalCard, .friendDonationCard, .section {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 1.5rem;
+}
+
+.totalCard {
+  background-color: #f0f7ff;
+  border: 2px solid #2b6cb0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.totalCard h3 {
+  color: #2b6cb0;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+.totalAmount {
+  color: #2b6cb0;
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.section {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sectionTitle {
+  margin-bottom: 1rem;
+  color: #2d3748;
+  font-weight: bold;
+  font-size: 1.3rem;
+  text-align: center;
+  padding: 0 1.5rem;
+}
+
+.paymentHeader, .paymentItem {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 0.8fr 0.6fr 0.8fr;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.paymentHeader {
+  font-weight: bold;
+  padding-top: 0.8rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 2px solid #0051A1;
+  margin-bottom: 0.8rem;
+  color: #0051A1;
+  font-size: 1.2rem;
+}
+
+.paymentHeader span {
+  text-align: center;
+  color: #4a5568;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 0.5rem;
+}
+
+.paymentList {
+  width: 100%;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.paymentItem {
+  padding-top: 0.8rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #eee;
+  font-size: 1.1rem;
+}
+
+.paymentItem span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 0.5rem;
+}
+
+.paymentItem:last-child {
+  border-bottom: none;
+}
+
+.paymentDate {
+  text-align: center;
+  color: #4a5568;
+}
+
+.paymentAmount {
+  text-align: center;
+  font-weight: bold;
+  color: #2d3748;
+}
+
+.donationClass {
+  text-align: center;
+  color: #4a5568;
+}
+
+.paymentMethod {
+  text-align: center;
+  font-weight: bold;
+  color: #2d3748;
+}
+
+.fromFriend {
+  text-align: center;
+  color: #4a5568;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.error {
+  text-align: center;
+  padding: 2rem;
+  color: #ff4444;
+}
+
+.emptyMessage {
+  text-align: center;
+  padding: 1.5rem;
+  color: #666;
+  font-size: 1.1rem;
+  width: 100%;
+}
+
+.friendDonationCard {
+  background-color: #fff0f7;
+  border: 2px solid #b02b6c;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.friendDonationCard h3 {
+  color: #b02b6c;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.2rem;
+}
+
+.friendDonationAmount {
+  color: #b02b6c;
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.friendDonationSection {
+  margin-top: 2rem;
+  border-top: 1px dashed #b02b6c;
+  padding-top: 1rem;
+  position: relative;
+}
+
+.friendDonationSection:before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 20px;
+  background-color: white;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0;
+  }
+
+  .section {
+    padding: 1rem 0;
+  }
+
+  .totalAmount, .friendDonationAmount {
+    font-size: 1.5rem;
+  }
+
+  .paymentHeader, .paymentItem {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .paymentHeader {
+    font-size: 1rem;
+  }
+
+  .paymentItem {
+    font-size: 0.9rem;
+  }
+
+  .sectionTitle {
+    padding: 0;
+    font-size: 1.2rem;
+  }
+
+  .paymentHeader span,
+  .paymentItem span {
+    padding: 0 0.2rem;
+  }
+} 

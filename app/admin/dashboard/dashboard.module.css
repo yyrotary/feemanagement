@@ -1,0 +1,82 @@
+.container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+  text-align: center;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.menuGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.menuItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: #0051A1;
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  height: 180px;
+}
+
+.menuIcon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.menuText {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.menuItem:hover {
+  background-color: #003d7a;
+}
+
+.backButton {
+  display: inline-block;
+  padding: 1rem 2rem;
+  background-color: #666;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  margin-top: 2rem;
+  transition: background-color 0.2s;
+}
+
+.backButton:hover {
+  background-color: #444;
+}
+
+@media (max-width: 600px) {
+  .menuGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .header {
+    flex-direction: column;
+  }
+}
