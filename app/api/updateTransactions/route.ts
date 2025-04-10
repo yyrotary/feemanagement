@@ -155,16 +155,39 @@ export async function POST(request: Request) {
   try {
     console.log('거래내역 업데이트 요청 처리 중...');
     
-    // 가장 최근 거래내역 조회
-    const latestTransactionDate = await getLatestTransaction();
+    // URL 쿼리 파라미터 파싱
+    const url = new URL(request.url);
+    const forceUpdate = url.searchParams.get('forceUpdate') === 'true';
+    const sinceDateParam = url.searchParams.get('sinceDate');
     
-    // 거래내역 날짜를 기준으로 sinceDate 설정
+    // 강제 업데이트 로그
+    if (forceUpdate) {
+      console.log('forceUpdate 매개변수가 설정되었습니다. 최근 거래내역 확인을 건너뜁니다.');
+    }
+    
+    // 가장 최근 거래내역 조회 (forceUpdate가 아닌 경우)
     let sinceDate: Date | undefined = undefined;
-    if (latestTransactionDate) {
-      // 당일 자정 이후의 거래는 놓치지 않도록 날짜를 당일 0시로 설정
-      sinceDate = new Date(latestTransactionDate);
-      sinceDate.setHours(0, 0, 0, 0);
-      console.log(`최근 거래내역 이후부터 검색: ${sinceDate.toISOString()}`);
+    
+    if (!forceUpdate) {
+      const latestTransactionDate = await getLatestTransaction();
+      
+      // 거래내역 날짜를 기준으로 sinceDate 설정
+      if (latestTransactionDate) {
+        // 당일 자정 이후의 거래는 놓치지 않도록 날짜를 당일 0시로 설정
+        sinceDate = new Date(latestTransactionDate);
+        sinceDate.setHours(0, 0, 0, 0);
+        console.log(`최근 거래내역 이후부터 검색: ${sinceDate.toISOString()}`);
+      }
+    }
+    
+    // URL 매개변수로 전달된 sinceDate가 있으면 우선 사용
+    if (sinceDateParam) {
+      try {
+        sinceDate = new Date(sinceDateParam);
+        console.log(`매개변수로 전달된 날짜부터 검색: ${sinceDate.toISOString()}`);
+      } catch (error) {
+        console.error('sinceDate 매개변수 파싱 오류:', error);
+      }
     }
     
     // Gmail 클라이언트 인증
@@ -205,7 +228,8 @@ export async function POST(request: Request) {
       emailsProcessed: result.emailsProcessed || 0,
       count: result.count || 0,
       nextPageToken: result.nextPageToken || null,
-      sinceDate: sinceDate ? sinceDate.toISOString() : null
+      sinceDate: sinceDate ? sinceDate.toISOString() : null,
+      forceUpdate: forceUpdate
     });
     
   } catch (error) {
