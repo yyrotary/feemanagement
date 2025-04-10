@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { notionClient, TRANSACTIONS_DB_ID } from '@/lib/notion';
+import { notionClient, TRANSACTIONS_DB_ID, DATABASE_IDS } from '@/lib/notion';
 import { google } from 'googleapis';
 import * as cheerio from 'cheerio';
 import path from 'path';
@@ -1049,6 +1049,41 @@ async function saveTransactionsToNotion(transactions: Array<{
       description: page.properties.description?.rich_text?.[0]?.plain_text || '',
     }));
     
+    // 모든 회원 목록 가져오기
+    console.log('회원 목록 조회 중...');
+    const membersResponse = await notionClient.databases.query({
+      database_id: DATABASE_IDS.MEMBERS,
+      sorts: [
+        {
+          property: 'Name',
+          direction: 'ascending'
+        }
+      ]
+    });
+    
+    // 회원 정보 맵 생성 (이름과 닉네임으로 검색할 수 있도록)
+    const memberMap = new Map<string, string>();
+    
+    membersResponse.results.forEach((page: any) => {
+      const id = page.id;
+      // 이름 추출
+      const name = page.properties.Name?.title?.[0]?.plain_text || '';
+      // 닉네임 추출 (있는 경우)
+      const nickname = page.properties.Nickname?.rich_text?.[0]?.plain_text || '';
+      
+      if (name) {
+        // 이름으로 검색용 맵에 추가 (소문자, 공백 제거)
+        memberMap.set(name.toLowerCase().replace(/\s+/g, ''), id);
+      }
+      
+      if (nickname) {
+        // 닉네임으로 검색용 맵에 추가 (소문자, 공백 제거)
+        memberMap.set(nickname.toLowerCase().replace(/\s+/g, ''), id);
+      }
+    });
+    
+    console.log(`총 ${memberMap.size}개의 회원 정보를 로드했습니다.`);
+    
     // 거래내역을 Notion 형식으로 변환
     const notionTransactions: Transaction[] = transactions.map(transaction => ({
       date: formatDateTimeToISO8601(transaction.date, transaction.emailDate),
@@ -1100,6 +1135,32 @@ async function saveTransactionsToNotion(transactions: Array<{
           rich_text: [{ type: 'text', text: { content: transaction.bank || '' } }],
         },
       };
+      
+      // 입금인 경우 적요에서 회원 정보 찾기
+      if (transaction.in > 0 && transaction.description) {
+        // 적요에서 공백 제거하고 소문자로 변환
+        const cleanDescription = transaction.description.toLowerCase().replace(/\s+/g, '');
+        
+        // 모든 회원 이름과 닉네임 중에 적요에 포함된 것이 있는지 검사
+        let foundMemberId: string | null = null;
+        
+        for (const [key, id] of memberMap.entries()) {
+          // 회원 이름/닉네임이 3글자 이상이고 적요에 포함되어 있는 경우만 매칭
+          if (key.length >= 3 && cleanDescription.includes(key)) {
+            foundMemberId = id;
+            console.log(`거래내역 "${transaction.description}"에서 회원 "${key}" 찾음 (ID: ${id})`);
+            break;
+          }
+        }
+        
+        // 회원을 찾은 경우 관계형 필드 설정
+        if (foundMemberId) {
+          properties.relatedmember = {
+            type: 'relation',
+            relation: [{ id: foundMemberId }]
+          };
+        }
+      }
       
       return notionClient.pages.create({
         parent: { database_id: TRANSACTIONS_DB_ID },
