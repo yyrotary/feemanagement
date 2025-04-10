@@ -24,8 +24,14 @@ export async function GET() {
       console.log('Gmail API authentication successful');
     }
 
-    console.log('Updating latest transactions...');
-    const result = await updateLatestTransactions();
+    
+    console.log('Cron job started: Updating latest transactions');
+    //const result = await updateLatestTransactions(); 이거 쓰지마 
+    const result = await fetch('@/api/updateTransactions', {
+        method: 'POST',
+      });
+
+
     console.log('Cron job completed:', result);
     return NextResponse.json({ success: true, result });
   } catch (error) {
