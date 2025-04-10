@@ -12,18 +12,7 @@ export async function GET(request: Request) {
     const now = new Date();
     console.log(`[${now.toISOString()}] Cron job 실행 시작`);
     
-    // 요청에서 인증 토큰 확인
-    const url = new URL(request.url);
-    const authToken = url.searchParams.get('token');
     
-    // 인증 토큰 검증
-    if (!authToken || authToken !== CRON_SECRET) {
-      console.log(`[${now.toISOString()}] 인증 실패: 유효하지 않은 토큰`);
-      return NextResponse.json({ 
-        status: 'error', 
-        message: '인증에 실패했습니다.' 
-      }, { status: 401 });
-    }
     
     // 마지막 실행 시간 기록 (선택 사항)
     const lastRunTime = now;
