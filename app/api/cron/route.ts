@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateLatestTransactions } from '@/app/api/updateTransactions/route';
+import { updateLatestTransactions } from '@/app/utils/updateTransactions';
 
 
 export const runtime = 'edge';
