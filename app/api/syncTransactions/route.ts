@@ -15,39 +15,15 @@ const VERIFICATION_CODE = '5088260376'; // NH농협 거래내역 확인 시 필�
 // 저장된 인증 정보 로드
 async function loadSavedCredentialsIfExist() {
   try {
-    const isProduction = process.env.NODE_ENV === 'production';
-    
-    if (isProduction) {
-      // 프로덕션 환경: 환경 변수에서 토큰 가져오기
-      const token = process.env.GOOGLE_TOKEN;
-      if (!token) {
-        console.log('GOOGLE_TOKEN 환경 변수가 설정되지 않았습니다.');
-        return null;
-      }
-      
-      const credentials = JSON.parse(token);
-      return google.auth.fromJSON(credentials);
-    } else {
-      // 개발 환경: 파일에서 토큰 가져오기
-      const TOKEN_PATH = path.join(process.cwd(), 'token.json');
-      
-      // 환경 변수에 토큰이 있으면 그것을 우선 사용
-      if (process.env.GOOGLE_TOKEN) {
-        console.log('환경 변수 GOOGLE_TOKEN에서 인증 정보를 가져옵니다.');
-        const credentials = JSON.parse(process.env.GOOGLE_TOKEN);
-        return google.auth.fromJSON(credentials);
-      }
-      
-      // 파일에서 토큰 가져오기
-      if (!fs.existsSync(TOKEN_PATH)) {
-        console.log(`토큰 파일이 없습니다: ${TOKEN_PATH}`);
-        return null;
-      }
-      
-      const content = fs.readFileSync(TOKEN_PATH, 'utf-8');
-      const credentials = JSON.parse(content);
-      return google.auth.fromJSON(credentials);
+    // 프로덕션 환경에서는 항상 환경 변수에서 토큰 가져오기
+    const token = process.env.GOOGLE_TOKEN;
+    if (!token) {
+      console.log('GOOGLE_TOKEN 환경 변수가 설정되지 않았습니다.');
+      return null;
     }
+    
+    const credentials = JSON.parse(token);
+    return google.auth.fromJSON(credentials);
   } catch (err) {
     console.error('저장된 인증 정보 로드 오류:', err);
     return null;

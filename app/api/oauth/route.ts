@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import fs from 'fs';
-import path from 'path';
 
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
-const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 
 // 배포 환경에 따른 리다이렉트 URI 설정
 const getRedirectUri = () => {
@@ -75,22 +72,14 @@ async function saveCredentials(client: OAuth2Client) {
       refresh_token: client.credentials.refresh_token,
     });
     
-    // 환경에 따른 저장 방식 선택
-    const isProduction = process.env.NODE_ENV === 'production';
+    // 인증 정보를 환경 변수에 저장하기 위해 콘솔에 출력
+    console.log('인증 정보를 환경 변수 GOOGLE_TOKEN에 저장해야 합니다:');
+    console.log(payload);
+    console.log('Vercel 대시보드에서 환경 변수 GOOGLE_TOKEN에 위 값을 설정하세요.');
     
-    if (isProduction) {
-      // 프로덕션 환경: 환경 변수 사용 안내
-      console.log('인증 정보를 환경 변수 GOOGLE_TOKEN에 저장해야 합니다:');
-      console.log(payload);
-      console.log('Vercel 대시보드에서 환경 변수 GOOGLE_TOKEN에 위 값을 설정하세요.');
-    } else {
-      // 개발 환경: 파일로 저장
-      fs.writeFileSync(TOKEN_PATH, payload);
-      console.log(`로컬 개발 환경: 인증 정보가 파일에 저장되었습니다: ${TOKEN_PATH}`);
-      
-      // 환경 변수에도 임시 저장 (개발 환경용)
+    // 개발 환경에서만 임시로 메모리에 저장
+    if (process.env.NODE_ENV !== 'production') {
       process.env.GOOGLE_TOKEN = payload;
-      console.log('개발 환경 변수 GOOGLE_TOKEN에도 저장되었습니다.');
     }
   } catch (err) {
     console.error('인증 정보 저장 오류:', err);
