@@ -1,20 +1,15 @@
 import { NextResponse } from 'next/server';
 
-// cron job의 마지막 실행 시간 추적을 위한 전역 변수
-let lastRunTime: Date | null = null;
-
-
 /**
  * POST 요청 처리 - cron job 실행 
- * Vercel의 cron 설정으로 이 엔드포인트가 2분마다 호출됨
  */
 export async function POST() {
   try {
     const now = new Date();
-    console.log(`[${now.toISOString()}] Cron 작업 시작: 최신 거래내역 업데이트`);
+    console.log(`Cron 작업 시작`);
  
     // updateTransactions API 호출
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
     const updateApiUrl = `${baseUrl}/api/updateTransactions`;
     
     console.log(`[${now.toISOString()}] API 호출 중: ${updateApiUrl}`);
@@ -34,8 +29,7 @@ export async function POST() {
     const result = await response.json();
     console.log(`[${now.toISOString()}] 거래내역 업데이트 완료:`, JSON.stringify(result, null, 2));
     
-    // 마지막 실행 시간 업데이트
-    lastRunTime = now;
+    
     
     return NextResponse.json({
       status: 'success',
