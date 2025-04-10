@@ -1,103 +1,132 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS } from '@/lib/notion';
 import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
-import { NotionMemberProperties, NotionFeeProperties } from '@/app/types/notionProperties';
-import { Member, MemberWithFees, MembersWithFeesResponse } from '@/app/types/member';
 
-export async function GET() {
+interface NotionMemberProperties {
+  Name: {
+    title: Array<{
+      plain_text: string;
+    }>;
+  };
+  nick: {
+    rich_text: Array<{
+      plain_text: string;
+    }>;
+  };
+  deduction: {
+    multi_select: Array<{
+      id: string;
+      name: string;
+      color: string;
+    }>;
+  };
+}
+
+interface NotionFeeProperties {
+  date: {
+    date: {
+      start: string;
+    };
+  };
+  paid_fee: {
+    number: number;
+  };
+  method: {
+    multi_select: Array<{
+      name: string;
+    }>;
+  };
+}
+
+export async function POST(request: Request) {
   try {
-    // 회원 목록 가져오기
-    const membersResponse = await notionClient.databases.query({
+    const { phone } = await request.json();
+    //console.log('Searching for phone:', phone);
+
+    // 회원 정보 조회
+    const memberResponse = await notionClient.databases.query({
       database_id: DATABASE_IDS.MEMBERS,
+      filter: {
+        property: 'phone',
+        number: {
+          equals: Number(phone)
+        }
+      }
+    });
+
+    //console.log('Member response:', memberResponse);
+
+    if (!memberResponse.results.length) {
+      return NextResponse.json({ error: '회원을 찾을 수 없습니다.' }, { status: 404 });
+    }
+
+    const member = memberResponse.results[0] as PageObjectResponse;
+    const properties = member.properties as unknown as NotionMemberProperties;
+    //console.log('Member properties:', properties);
+
+    //console.log('All properties:', JSON.stringify(properties, null, 2));
+
+    const name = properties.Name.title[0].plain_text;
+    const nickname = properties.nick?.rich_text?.[0]?.plain_text || '';
+
+    //console.log('Deduction field:', properties.deduction);  // 필드 이름 확인
+
+    // multi_select 배열에 'senior'가 있는지 확인
+    const isElder = properties.deduction.multi_select.some(item => item.name === 'senior');
+    const requiredFee = isElder ? 200000 : 720000;
+
+    //console.log('Deduction values:', properties.deduction.multi_select.map(item => item.name));
+    //console.log('Is senior:', isElder);
+    //console.log('Required fee:', requiredFee);
+
+    // 회비 내역 조회
+    const feeResponse = await notionClient.databases.query({
+      database_id: DATABASE_IDS.FEES,
+      filter: {
+        property: 'name',
+        relation: {
+          contains: member.id
+        }
+      },
       sorts: [
         {
-          property: 'Name',
-          direction: 'ascending'
+          property: 'date',
+          direction: 'descending'
         }
       ]
     });
 
-    // 회비 정보 가져오기
-    const feesResponse = await notionClient.databases.query({
-      database_id: DATABASE_IDS.FEES,
-    });
+    //console.log('Fee response:', feeResponse);
 
-    // 특별회비 정보 가져오기
-    const specialFeesResponse = await notionClient.databases.query({
-      database_id: DATABASE_IDS.SPECIAL_FEES,
-    });
-
-    // 회원 정보 매핑
-    const members: MemberWithFees[] = membersResponse.results.map((page) => {
-      const pageObj = page as PageObjectResponse;
-      const properties = pageObj.properties as unknown as NotionMemberProperties;
-      
-      // 닉네임 추출 (nick 또는 Nickname 필드가 있을 수 있음)
-      let nickname = '';
-      if (properties.nick && properties.nick.rich_text.length > 0) {
-        nickname = properties.nick.rich_text[0].plain_text;
-      } else if (properties.Nickname && properties.Nickname.rich_text.length > 0) {
-        nickname = properties.Nickname.rich_text[0].plain_text;
-      }
-      
-      // 공제 정보 추출
-      const deduction = properties.deduction ? 
-        properties.deduction.multi_select.map(item => item.name) : [];
-      
-      const memberId = pageObj.id;
-      const memberName = properties.Name.title[0].plain_text;
-      
-      // 해당 회원의 일반 회비 필터링
-      const memberFees = feesResponse.results.filter((fee) => {
-        const feeObj = fee as PageObjectResponse;
-        const member = feeObj.properties.member as any;
-        return member?.relation?.some((rel: any) => rel.id === memberId);
-      });
-      
-      // 해당 회원의 특별 회비 필터링
-      const memberSpecialFees = specialFeesResponse.results.filter((fee) => {
-        const feeObj = fee as PageObjectResponse;
-        const member = feeObj.properties.member as any;
-        return member?.relation?.some((rel: any) => rel.id === memberId);
-      });
-      
-      // 일반 회비 합계 계산
-      const regularTotal = memberFees.reduce((sum, fee) => {
-        const feeObj = fee as PageObjectResponse;
-        const properties = feeObj.properties as unknown as NotionFeeProperties;
-        return sum + (properties.paid_fee?.number || 0);
-      }, 0);
-      
-      // 특별 회비 합계 계산
-      const specialTotal = memberSpecialFees.reduce((sum, fee) => {
-        const feeObj = fee as PageObjectResponse;
-        const properties = feeObj.properties as unknown as NotionFeeProperties;
-        return sum + (properties.paid_fee?.number || 0);
-      }, 0);
-      
+    const feeHistory = feeResponse.results.map((fee) => {
+      const feePage = fee as PageObjectResponse;
+      const feeProperties = feePage.properties as unknown as NotionFeeProperties;
+      const method = feeProperties.method.multi_select.map(m => m.name);
+      console.log('General Fee method from Notion:', method, typeof method);
       return {
-        id: memberId,
-        name: memberName,
-        nickname: nickname,
-        deduction: deduction,
-        totalPaid: regularTotal + specialTotal,
-        regulars: {
-          count: memberFees.length,
-          amount: regularTotal
-        },
-        specials: {
-          count: memberSpecialFees.length,
-          amount: specialTotal
-        }
+        date: feeProperties.date.date.start,
+        paid_fee: feeProperties.paid_fee.number,
+        method
       };
     });
 
-    return NextResponse.json({ members } as MembersWithFeesResponse);
+    const totalPaid = feeHistory.reduce((sum, fee) => sum + fee.paid_fee, 0);
+    const remainingFee = Math.max(0, requiredFee - totalPaid);
+
+    return NextResponse.json({
+      id: member.id,
+      name,
+      nickname,
+      totalPaid,
+      remainingFee,
+      feeHistory
+    });
+
   } catch (error) {
-    console.error('Error fetching member fees:', error);
-    return NextResponse.json(
-      { error: '회원 회비 정보를 불러오는데 실패했습니다.' }, 
-      { status: 500 }
-    );
+    console.error('Error details:', error);
+    return NextResponse.json({ 
+      error: '서버 오류가 발생했습니다.',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }

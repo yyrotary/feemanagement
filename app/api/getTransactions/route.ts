@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { notionClient, TRANSACTIONS_DB_ID } from '@/lib/notion';
-import type { Transaction, TransactionResponse } from '@/app/types/transaction';
-import { NotionTransactionProperties } from '@/app/types/notionProperties';
+import type { Transaction } from '@/app/types/transaction';
 
 export async function GET(request: Request) {
   try {
@@ -70,26 +69,27 @@ export async function GET(request: Request) {
     
     // 결과 변환
     const transactions: Transaction[] = response.results.map((page: any) => {
-      const properties = page.properties as unknown as NotionTransactionProperties;
-      
       return {
         id: page.id,
-        date: properties.date.date.start,
-        in: properties.in.number || 0,
-        out: properties.out.number || 0,
-        balance: properties.balance.number || 0,
-        description: properties.description.rich_text[0]?.plain_text || '',
-        branch: properties.branch?.rich_text[0]?.plain_text || '',
-        bank: properties.bank?.rich_text[0]?.plain_text || '',
-        memo: properties.memo?.rich_text[0]?.plain_text || '',
+        date: page.properties.date?.date?.start || '',
+        in: page.properties.in?.number || 0,
+        out: page.properties.out?.number || 0,
+        balance: page.properties.balance?.number || 0,
+        description: page.properties.description?.rich_text?.[0]?.plain_text || '',
+        branch: page.properties.branch?.rich_text?.[0]?.plain_text || '',
+        bank: page.properties.bank?.rich_text?.[0]?.plain_text || '',
+        memo: page.properties.memo?.rich_text?.[0]?.plain_text || '',
       };
     });
     
-    return NextResponse.json({ transactions } as TransactionResponse);
+    return NextResponse.json({
+      transactions,
+      count: transactions.length,
+    });
   } catch (error) {
-    console.error('거래내역 조회 오류:', error);
+    console.error('거래내역 조회 중 오류 발생:', error);
     return NextResponse.json(
-      { error: '거래내역을 조회하는 중 오류가 발생했습니다.' },
+      { error: error instanceof Error ? error.message : '거래내역을 조회할 수 없습니다.' },
       { status: 500 }
     );
   }

@@ -1,12 +1,12 @@
 export interface Transaction {
-  id?: string;        // 노션 ID (생성 전에는 없을 수 있음)
+  id: string;
   date: string;        // 거래일
   in?: number;         // 입금액
   out?: number;        // 출금액
   balance: number;     // 잔액
   description: string; // 기록사항
-  branch?: string;     // 거래점
-  bank?: string;       // 거래은행
+  branch: string;      // 거래점
+  bank: string;        // 거래은행
   memo?: string;       // 이체메모
   // 이전 필드 호환성 유지를 위해 선택적 필드로 남겨둠
   type?: string;       // '입금' 또는 '출금' (레거시)
@@ -15,11 +15,4 @@ export interface Transaction {
 
 export interface TransactionResponse {
   transactions: Transaction[];
-}
-
-/**
- * 내부 처리용 Transaction 타입 (서비스 간 호환성을 위한 확장 인터페이스)
- */
-export interface InternalTransaction extends Transaction {
-  emailDate?: Date;    // 이메일 수신 날짜
 } 
