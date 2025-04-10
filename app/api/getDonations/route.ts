@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS } from '@/lib/notion';
 import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
+import { QueryDatabaseParameters } from '@notionhq/client/build/src/api-endpoints';
 import { NotionMemberProperties, NotionDonationProperties } from '@/lib/notion-types';
 
 export async function GET(request: Request) {
