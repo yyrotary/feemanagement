@@ -11,45 +11,93 @@ import puppeteer from 'puppeteer';
 const GMAIL_USER = 'me';
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
 
-// 저장된 인증 정보 로드
+// 저장된 인증 정보 로드 및 토큰 새로고침
 async function loadSavedCredentialsIfExist() {
   try {
-    // 항상 환경 변수에서 토큰 가져오기
+    // 환경 변수에서 토큰 가져오기
     const token = process.env.GOOGLE_TOKEN;
     if (!token) {
       console.log('GOOGLE_TOKEN 환경 변수가 설정되지 않았습니다.');
       return null;
     }
     
-    const credentials = JSON.parse(token);
-    return google.auth.fromJSON(credentials);
+    // 환경 변수에서 클라이언트 정보 가져오기
+    const credentials = process.env.GOOGLE_CREDENTIALS;
+    if (!credentials) {
+      console.log('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
+      return null;
+    }
+    
+    // 토큰과 클라이언트 정보 파싱
+    const parsedToken = JSON.parse(token);
+    const parsedCredentials = JSON.parse(credentials);
+    const clientInfo = parsedCredentials.installed || parsedCredentials.web;
+    
+    // OAuth2 클라이언트 생성
+    const oauth2Client = new OAuth2Client({
+      clientId: clientInfo.client_id,
+      clientSecret: clientInfo.client_secret,
+      redirectUri: clientInfo.redirect_uris?.[0] || 'http://localhost',
+    });
+    
+    // 기존 토큰 설정
+    oauth2Client.setCredentials({
+      access_token: parsedToken.access_token,
+      refresh_token: parsedToken.refresh_token,
+      expiry_date: parsedToken.expiry_date || Date.now() + 3600 * 1000,
+    });
+    
+    // 토큰이 만료되었는지 확인하고 필요하면 자동으로 새로고침
+    const currentTime = Date.now();
+    const expiryDate = parsedToken.expiry_date || 0;
+    const tokenExpireThreshold = 5 * 60 * 1000; // 5분 이내 만료 예정이면 갱신
+
+    if (!expiryDate || currentTime + tokenExpireThreshold >= expiryDate) {
+      console.log('토큰이 만료되었거나 곧 만료됩니다. 새로고침 시도 중...');
+      try {
+        const { credentials } = await oauth2Client.refreshAccessToken();
+        console.log('액세스 토큰 새로고침 성공');
+        
+        // 서버리스 환경에서는 환경 변수를 실시간으로 업데이트 할 수 없기 때문에
+        // 로그만 출력하고, 개발 환경에서 이 값을 Vercel에 수동으로 설정해야 합니다.
+        console.log('새 토큰을 환경 변수 GOOGLE_TOKEN에 업데이트해야 합니다:');
+        console.log(JSON.stringify({
+          access_token: credentials.access_token,
+          refresh_token: credentials.refresh_token || parsedToken.refresh_token,
+          expiry_date: credentials.expiry_date,
+          token_type: credentials.token_type,
+          scope: credentials.scope,
+          id_token: credentials.id_token
+        }));
+      } catch (refreshError) {
+        console.error('토큰 새로고침 오류:', refreshError);
+        // 새로고침에 실패하더라도 계속 진행 (기존 토큰이 아직 유효할 수 있음)
+      }
+    }
+    
+    return oauth2Client;
   } catch (err) {
     console.error('저장된 인증 정보 로드 오류:', err);
     return null;
   }
 }
 
-// Gmail API 인증
+// Gmail API 인증 (자동 갱신 지원)
 async function getGmailClient() {
   try {
-    // 인증 정보 확인
-    const credentials = process.env.GOOGLE_CREDENTIALS;
-    if (!credentials) {
-      throw new Error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
-    }
-
-    // 저장된 인증 정보 로드
-    let client = await loadSavedCredentialsIfExist();
+    // 인증 정보 로드 및 토큰 새로고침
+    let oauth2Client = await loadSavedCredentialsIfExist();
     
-    // 저장된 인증 정보가 없으면 새로 인증 진행 (서버에서는 불가능)
-    if (!client) {
-      throw new Error('OAuth 인증 토큰이 없습니다. GOOGLE_TOKEN 환경 변수를 설정해야 합니다.');
+    // 인증 정보가 없으면 에러
+    if (!oauth2Client) {
+      throw new Error('OAuth 인증에 필요한 토큰이나 인증 정보가 없습니다. 환경 변수를 확인하세요.');
     }
     
     // Gmail API 클라이언트 생성
+    console.log('Gmail API 클라이언트 생성 중...');
     return google.gmail({ 
       version: 'v1', 
-      auth: client as any 
+      auth: oauth2Client 
     });
   } catch (error) {
     console.error('Gmail API 인증 오류:', error);
