@@ -252,7 +252,7 @@ export async function POST(request: Request) {
     if (sinceDate) {
       apiUrl.searchParams.append('sinceDate', sinceDate.toISOString());
     }
-    apiUrl.searchParams.append('batchSize', '500');
+    apiUrl.searchParams.append('batchSize', '1');
     
     console.log(`API 호출 URL: ${apiUrl.toString()}`);
     
