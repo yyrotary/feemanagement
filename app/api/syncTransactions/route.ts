@@ -9,31 +9,60 @@ import { OAuth2Client } from 'google-auth-library';
 
 // Gmail API 설정
 const GMAIL_USER = 'me'; // 'me'는 인증된 사용자를 의미함
-const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
-const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
 const VERIFICATION_CODE = '5088260376'; // NH농협 거래내역 확인 시 필요한 인증번호
 
 // 저장된 인증 정보 로드
 async function loadSavedCredentialsIfExist() {
   try {
-    if (!fs.existsSync(TOKEN_PATH)) {
-      return null;
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    if (isProduction) {
+      // 프로덕션 환경: 환경 변수에서 토큰 가져오기
+      const token = process.env.GOOGLE_TOKEN;
+      if (!token) {
+        console.log('GOOGLE_TOKEN 환경 변수가 설정되지 않았습니다.');
+        return null;
+      }
+      
+      const credentials = JSON.parse(token);
+      return google.auth.fromJSON(credentials);
+    } else {
+      // 개발 환경: 파일에서 토큰 가져오기
+      const TOKEN_PATH = path.join(process.cwd(), 'token.json');
+      
+      // 환경 변수에 토큰이 있으면 그것을 우선 사용
+      if (process.env.GOOGLE_TOKEN) {
+        console.log('환경 변수 GOOGLE_TOKEN에서 인증 정보를 가져옵니다.');
+        const credentials = JSON.parse(process.env.GOOGLE_TOKEN);
+        return google.auth.fromJSON(credentials);
+      }
+      
+      // 파일에서 토큰 가져오기
+      if (!fs.existsSync(TOKEN_PATH)) {
+        console.log(`토큰 파일이 없습니다: ${TOKEN_PATH}`);
+        return null;
+      }
+      
+      const content = fs.readFileSync(TOKEN_PATH, 'utf-8');
+      const credentials = JSON.parse(content);
+      return google.auth.fromJSON(credentials);
     }
-    const content = fs.readFileSync(TOKEN_PATH, 'utf-8');
-    const credentials = JSON.parse(content);
-    return google.auth.fromJSON(credentials);
   } catch (err) {
     console.error('저장된 인증 정보 로드 오류:', err);
     return null;
   }
 }
 
-// 인증 정보 저장
+// 인증 정보 저장 (Vercel 환경에서는 실제로 저장되지 않음, 로그만 출력)
 async function saveCredentials(client: OAuth2Client) {
   try {
-    const content = fs.readFileSync(CREDENTIALS_PATH, 'utf-8');
-    const keys = JSON.parse(content);
+    const credentials = process.env.GOOGLE_CREDENTIALS;
+    if (!credentials) {
+      throw new Error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
+    }
+    
+    const keys = JSON.parse(credentials);
     const key = keys.installed || keys.web;
     const payload = JSON.stringify({
       type: 'authorized_user',
@@ -41,8 +70,15 @@ async function saveCredentials(client: OAuth2Client) {
       client_secret: key.client_secret,
       refresh_token: client.credentials.refresh_token,
     });
-    fs.writeFileSync(TOKEN_PATH, payload);
-    console.log('인증 정보가 저장되었습니다:', TOKEN_PATH);
+    
+    // 환경 변수에 저장하는 대신 콘솔에 출력 (실제로는 Vercel 환경 변수에 설정해야 함)
+    console.log('인증 정보를 환경 변수 GOOGLE_TOKEN에 저장해야 합니다:');
+    console.log(payload);
+    
+    // 개발 환경을 위한 임시 저장 (테스트용)
+    if (process.env.NODE_ENV !== 'production') {
+      process.env.GOOGLE_TOKEN = payload;
+    }
   } catch (err) {
     console.error('인증 정보 저장 오류:', err);
     throw new Error('인증 정보를 저장할 수 없습니다.');
@@ -52,9 +88,10 @@ async function saveCredentials(client: OAuth2Client) {
 // Gmail API 인증
 async function getGmailClient() {
   try {
-    // 인증 파일 확인
-    if (!fs.existsSync(CREDENTIALS_PATH)) {
-      throw new Error(`OAuth 인증 파일을 찾을 수 없습니다: ${CREDENTIALS_PATH}`);
+    // 인증 정보 확인
+    const credentials = process.env.GOOGLE_CREDENTIALS;
+    if (!credentials) {
+      throw new Error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
     }
 
     // 저장된 인증 정보 로드
@@ -62,7 +99,7 @@ async function getGmailClient() {
     
     // 저장된 인증 정보가 없으면 새로 인증 진행 (서버에서는 불가능)
     if (!client) {
-      throw new Error('OAuth 인증 토큰이 없습니다. 먼저 로컬에서 인증을 수행해야 합니다.');
+      throw new Error('OAuth 인증 토큰이 없습니다. GOOGLE_TOKEN 환경 변수를 설정해야 합니다.');
     }
     
     // Gmail API 클라이언트 생성

@@ -14,14 +14,17 @@ const getRedirectUri = () => {
   
   // 프로덕션 환경에서는 실제 도메인 사용
   if (isProduction) {
+    console.log('production 환경입니다.');
     return 'https://yyrotarybanking.vercel.app/api/oauth/callback';
   }
   
   // 개발 환경에서는 localhost 사용
+  console.log('development 환경입니다.');
   return 'http://localhost:3000/api/oauth/callback';
 };
 
 const REDIRECT_URI = getRedirectUri();
+
 
 // 인증 정보 저장 함수
 async function saveCredentials(client: OAuth2Client) {

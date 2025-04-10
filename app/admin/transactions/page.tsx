@@ -5,7 +5,6 @@ import Link from 'next/link';
 import styles from './transactions.module.css';
 import { Transaction } from '@/app/types/transaction';
 import React from 'react';
-import { checkAuthStatus, authenticateGmail, updateLatestTransactions } from '@/app/utils/gmailAuth';
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -34,6 +33,81 @@ export default function TransactionsPage() {
     // 인증 상태 확인
     checkAuthStatus();
   }, []);
+
+  // 인증 상태 확인
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/oauth/status');
+      
+      if (response.ok) {
+        const data = await response.json();
+        setIsAuthenticated(data.isAuthenticated);
+      } else {
+        setIsAuthenticated(false);
+      }
+    } catch (err) {
+      console.error('인증 상태 확인 오류:', err);
+      setIsAuthenticated(false);
+    }
+  };
+
+  // Gmail API 인증 수행
+  const authenticateGmailApi = async () => {
+    try {
+      setAuthLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/oauth');
+      
+      if (!response.ok) {
+        throw new Error('인증 URL을 가져오는데 실패했습니다.');
+      }
+      
+      const data = await response.json();
+
+      console.log('data.authUrl:', data.authUrl);
+      
+      if (data.authUrl) {
+        // 현재 URL 저장 (로컬 스토리지)
+        localStorage.setItem('oauth_return_url', window.location.href);
+        
+        // 개발 단계 알림
+        alert('Gmail API 인증 페이지로 이동합니다. 현재 앱은 테스트 모드이므로 "테스트 사용자" 계정으로만 인증이 가능합니다. 테스트 사용자로 등록된 계정은 yyrotary@gmail.com입니다.');
+        
+        // 새 창 또는 새 탭에서 인증 URL 열기
+        const authWindow = window.open(data.authUrl, '_blank', 'width=600,height=700');
+        
+        // 인증 창이 차단되었는지 확인
+        if (!authWindow || authWindow.closed || typeof authWindow.closed === 'undefined') {
+          alert('팝업 창이 차단되었습니다. 팝업 차단을 해제하고 다시 시도해주세요.');
+        } else {
+          // 주기적으로 인증 상태 확인
+          const checkAuthInterval = setInterval(async () => {
+            await checkAuthStatus();
+            
+            // 인증 완료 시 인터벌 제거
+            if (isAuthenticated) {
+              clearInterval(checkAuthInterval);
+              alert('Gmail API 인증이 완료되었습니다.');
+            }
+          }, 2000);
+          
+          // 5분 후 타이머 종료 (최대 대기 시간)
+          setTimeout(() => {
+            clearInterval(checkAuthInterval);
+          }, 300000);
+        }
+      } else {
+        throw new Error('인증 URL이 제공되지 않았습니다.');
+      }
+    } catch (err) {
+      console.error('Error authenticating Gmail API:', err);
+      setError(err instanceof Error ? err.message : 'Gmail API 인증에 실패했습니다.');
+      alert(`오류: ${err instanceof Error ? err.message : 'Gmail API 인증에 실패했습니다.'}`);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
 
   // 거래내역 조회 함수
   const fetchTransactions = async (start: string, end: string) => {
@@ -87,7 +161,7 @@ export default function TransactionsPage() {
           );
           
           if (confirmAuth) {
-            await authenticateGmail();
+            await authenticateGmailApi();
             return;
           }
         } else if (errorMessage.includes('access_denied')) {
@@ -97,7 +171,7 @@ export default function TransactionsPage() {
           );
           
           if (confirmAuth) {
-            await authenticateGmail();
+            await authenticateGmailApi();
             return;
           }
         }
@@ -148,7 +222,7 @@ export default function TransactionsPage() {
           );
           
           if (confirmAuth) {
-            await authenticateGmail();
+            await authenticateGmailApi();
             return;
           }
         } else if (errorMessage.includes('access_denied')) {
@@ -158,7 +232,7 @@ export default function TransactionsPage() {
           );
           
           if (confirmAuth) {
-            await authenticateGmail();
+            await authenticateGmailApi();
             return;
           }
         }
@@ -278,7 +352,7 @@ export default function TransactionsPage() {
         <div className={styles.buttonGroup}>
           <button 
             className={getAuthButtonClass()}
-            onClick={authenticateGmail}
+            onClick={authenticateGmailApi}
             disabled={authLoading || isAuthenticated === true}
           >
             {getAuthButtonText()}

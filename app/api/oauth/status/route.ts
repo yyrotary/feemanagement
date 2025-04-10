@@ -7,6 +7,7 @@ const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 // 인증 상태 조회 API
 export async function GET() {
   try {
+    console.log('토큰 파일 경로:', TOKEN_PATH);
     // 토큰 파일 존재 여부 확인
     const isAuthenticated = fs.existsSync(TOKEN_PATH);
     

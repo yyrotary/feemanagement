@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { OAuth2Client } from 'google-auth-library';
 import fs from 'fs';
 import path from 'path';
-import { OAuth2Client } from 'google-auth-library';
 
-const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
-const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
+const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 
 // 배포 환경에 따른 리다이렉트 URI 설정
 const getRedirectUri = () => {
@@ -23,16 +22,18 @@ const getRedirectUri = () => {
 };
 
 const REDIRECT_URI = getRedirectUri();
+console.log('REDIRECT_URI:', REDIRECT_URI);
 
 // 인증 URL 생성 함수
 async function getAuthUrl() {
   try {
-    if (!fs.existsSync(CREDENTIALS_PATH)) {
-      throw new Error(`OAuth 인증 파일을 찾을 수 없습니다: ${CREDENTIALS_PATH}`);
+    // 환경 변수에서 인증 정보 가져오기
+    const credentials = process.env.GOOGLE_CREDENTIALS;
+    if (!credentials) {
+      throw new Error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
     }
     
-    const content = fs.readFileSync(CREDENTIALS_PATH, 'utf-8');
-    const keys = JSON.parse(content);
+    const keys = JSON.parse(credentials);
     const key = keys.installed || keys.web;
     
     const oAuth2Client = new google.auth.OAuth2(
@@ -60,8 +61,12 @@ async function getAuthUrl() {
 // 인증 정보 저장 함수
 async function saveCredentials(client: OAuth2Client) {
   try {
-    const content = fs.readFileSync(CREDENTIALS_PATH, 'utf-8');
-    const keys = JSON.parse(content);
+    const credentials = process.env.GOOGLE_CREDENTIALS;
+    if (!credentials) {
+      throw new Error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
+    }
+    
+    const keys = JSON.parse(credentials);
     const key = keys.installed || keys.web;
     const payload = JSON.stringify({
       type: 'authorized_user',
@@ -69,8 +74,24 @@ async function saveCredentials(client: OAuth2Client) {
       client_secret: key.client_secret,
       refresh_token: client.credentials.refresh_token,
     });
-    fs.writeFileSync(TOKEN_PATH, payload);
-    console.log('인증 정보가 저장되었습니다:', TOKEN_PATH);
+    
+    // 환경에 따른 저장 방식 선택
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    if (isProduction) {
+      // 프로덕션 환경: 환경 변수 사용 안내
+      console.log('인증 정보를 환경 변수 GOOGLE_TOKEN에 저장해야 합니다:');
+      console.log(payload);
+      console.log('Vercel 대시보드에서 환경 변수 GOOGLE_TOKEN에 위 값을 설정하세요.');
+    } else {
+      // 개발 환경: 파일로 저장
+      fs.writeFileSync(TOKEN_PATH, payload);
+      console.log(`로컬 개발 환경: 인증 정보가 파일에 저장되었습니다: ${TOKEN_PATH}`);
+      
+      // 환경 변수에도 임시 저장 (개발 환경용)
+      process.env.GOOGLE_TOKEN = payload;
+      console.log('개발 환경 변수 GOOGLE_TOKEN에도 저장되었습니다.');
+    }
   } catch (err) {
     console.error('인증 정보 저장 오류:', err);
     throw new Error('인증 정보를 저장할 수 없습니다.');
@@ -97,6 +118,7 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
     const code = data.code;
+    console.log('인증 코드:', code);
     
     if (!code) {
       return NextResponse.json(
@@ -105,8 +127,12 @@ export async function POST(request: Request) {
       );
     }
     
-    const content = fs.readFileSync(CREDENTIALS_PATH, 'utf-8');
-    const keys = JSON.parse(content);
+    const credentials = process.env.GOOGLE_CREDENTIALS;
+    if (!credentials) {
+      throw new Error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
+    }
+    
+    const keys = JSON.parse(credentials);
     const key = keys.installed || keys.web;
     
     const oAuth2Client = new google.auth.OAuth2(
