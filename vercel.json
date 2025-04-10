@@ -5,14 +5,5 @@
       "schedule": "*/2 * * * *"
     }
   ],
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "github": {
-    "silent": false,
-    "autoAlias": true
-  }
+  "framework": "nextjs"
 } 
