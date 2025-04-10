@@ -30,8 +30,7 @@ yarn-error.log*
 token.json
 credentials.json
 
-# vercel
-.vercel
+
 
 # typescript
 *.tsbuildinfo
