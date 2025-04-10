@@ -245,7 +245,7 @@ export async function POST(request: Request) {
     console.log('최신 거래내역 이메일 검색 중...');
     
     // 기존 API 호출 - URL 생성 수정
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
     const apiUrl = new URL('/api/syncTransactions', baseUrl);
     
     // URL 매개변수 추가
@@ -274,6 +274,7 @@ export async function POST(request: Request) {
       status: 'success',
       message: `최근 거래내역 업데이트 완료 (${sinceDate ? sinceDate.toLocaleDateString() : '전체'} 이후)`,
       emailsProcessed: result.emailsProcessed || 0,
+      url: apiUrl.toString(),
       count: result.count || 0,
       nextPageToken: result.nextPageToken || null,
       sinceDate: sinceDate ? sinceDate.toISOString() : null,
