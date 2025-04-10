@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { updateLatestTransactions } from '@/app/admin/transactions/page';
+import { updateLatestTransactions } from '@/app/api/updateTransactions/route';
+
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';

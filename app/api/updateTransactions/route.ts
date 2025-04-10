@@ -4,6 +4,17 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import path from 'path';
 import fs from 'fs';
+import { Client } from '@notionhq/client';
+import { JWT } from 'google-auth-library';
+import { parse } from 'node-html-parser';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
+
+const notion = new Client({
+  auth: process.env.NOTION_TOKEN,
+});
+
+const DATABASE_ID = process.env.NOTION_DATABASE_ID || '';
 
 // Gmail API 설정 값들 가져오기
 const GMAIL_USER = 'me';
@@ -146,10 +157,9 @@ function filterDuplicates(newTransactions: any[], existingTransactions: any[]) {
   return filteredTransactions;
 }
 
-// POST 메서드 - 최신 거래내역부터 업데이트
-export async function POST(request: Request) {
+export async function updateLatestTransactions() {
   try {
-    console.log('거래내역 업데이트 요청 처리 중...');
+    console.log('Starting updateLatestTransactions...');
     
     // 가장 최근 거래내역 조회
     const latestTransactionDate = await getLatestTransaction();
@@ -195,21 +205,32 @@ export async function POST(request: Request) {
     
     const result = await response.json();
     
-    return NextResponse.json({
-      status: 'success',
-      message: `최근 거래내역 업데이트 완료 (${sinceDate ? sinceDate.toLocaleDateString() : '전체'} 이후)`,
-      emailsProcessed: result.emailsProcessed || 0,
-      count: result.count || 0,
+    return {
+      success: true,
+      message: 'Transactions updated successfully',
+      newTransactions: result.emailsProcessed || 0,
+      totalTransactions: result.count || 0,
       nextPageToken: result.nextPageToken || null,
       sinceDate: sinceDate ? sinceDate.toISOString() : null
-    });
-    
+    };
   } catch (error) {
-    console.error('거래내역 업데이트 중 오류 발생:', error);
-    return NextResponse.json({ 
-      status: 'error', 
-      error: '거래내역 업데이트 중 오류 발생', 
-      details: error instanceof Error ? error.message : String(error) 
-    }, { status: 500 });
+    console.error('Error in updateLatestTransactions:', error);
+    throw error;
+  }
+}
+
+export async function POST() {
+  try {
+    const result = await updateLatestTransactions();
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error('Error in POST handler:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      },
+      { status: 500 }
+    );
   }
 } 
