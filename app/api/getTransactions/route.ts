@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { notionClient, TRANSACTIONS_DB_ID } from '@/lib/notion';
-import type { Transaction } from '@/app/types/transaction';
+import type { Transaction } from '@/lib/notion-types';
 
 export async function GET(request: Request) {
   try {

@@ -1,40 +1,7 @@
 import { NextResponse } from 'next/server';
-import { notionClient } from '@/lib/notion';
-import { DONATIONS_DB_ID } from '@/lib/notion';
-import { 
-  PageObjectResponse,
-  QueryDatabaseParameters
-} from '@notionhq/client/build/src/api-endpoints';
-
-interface NotionDonationProperties {
-  name: {
-    relation: { id: string }[];
-  };
-  date: {
-    date: { start: string };
-  };
-  paid_fee: {
-    number: number;
-  };
-  class: {
-    multi_select: { name: string }[];
-  };
-  method: {
-    multi_select: { name: string }[];
-  };
-  from_friend: {
-    relation: { id: string }[];
-  };
-}
-
-interface NotionMemberProperties {
-  Name: {
-    title: { plain_text: string }[];
-  };
-  nickname: {
-    rich_text: { plain_text: string }[];
-  };
-}
+import { notionClient, DATABASE_IDS } from '@/lib/notion';
+import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
+import { NotionMemberProperties, NotionDonationProperties } from '@/lib/notion-types';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -64,7 +31,7 @@ export async function GET(request: Request) {
     }
 
     const response = await notionClient.databases.query({
-      database_id: DONATIONS_DB_ID,
+      database_id: DATABASE_IDS.DONATIONS,
       filter: filter,
       sorts: [
         {

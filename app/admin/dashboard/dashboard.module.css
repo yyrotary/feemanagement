@@ -38,8 +38,9 @@
   text-decoration: none;
   font-size: 1.2rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s ease;
   height: 180px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .menuIcon {
@@ -50,10 +51,13 @@
 .menuText {
   font-size: 1.2rem;
   font-weight: bold;
+  text-align: center;
 }
 
 .menuItem:hover {
   background-color: #003d7a;
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
 .backButton {
@@ -72,11 +76,43 @@
 }
 
 @media (max-width: 600px) {
-  .menuGrid {
-    grid-template-columns: 1fr;
+  .container {
+    padding: 0.5rem;
+    margin: 1rem auto;
   }
   
   .header {
     flex-direction: column;
+    margin-bottom: 1rem;
+  }
+  
+  .logo {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .menuGrid {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+  
+  .menuItem {
+    padding: 1.5rem;
+    height: 140px;
+  }
+  
+  .menuIcon {
+    font-size: 2rem;
+  }
+  
+  .menuText {
+    font-size: 1rem;
+  }
+  
+  .backButton {
+    padding: 0.8rem 1.5rem;
+    margin-top: 1.5rem;
+    width: 100%;
+    box-sizing: border-box;
   }
 }

@@ -1,14 +1,7 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS } from '@/lib/notion';
 import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
-
-interface NotionMemberProperties {
-  Name: {
-    title: Array<{
-      plain_text: string;
-    }>;
-  };
-}
+import { NotionMemberProperties, Member } from '@/lib/notion-types';
 
 export async function GET() {
   try {

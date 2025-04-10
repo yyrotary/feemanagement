@@ -1,18 +1,8 @@
-export interface Transaction {
-  id: string;
-  date: string;        // 거래일
-  in?: number;         // 입금액
-  out?: number;        // 출금액
-  balance: number;     // 잔액
-  description: string; // 기록사항
-  branch: string;      // 거래점
-  bank: string;        // 거래은행
-  memo?: string;       // 이체메모
-  // 이전 필드 호환성 유지를 위해 선택적 필드로 남겨둠
-  type?: string;       // '입금' 또는 '출금' (레거시)
-  amount?: number;     // 거래금액 (레거시)
-}
+/**
+ * @deprecated 이 파일은 더 이상 사용되지 않습니다. lib/notion-types.ts를 대신 사용하세요.
+ */
 
-export interface TransactionResponse {
-  transactions: Transaction[];
-} 
+// lib/notion-types.ts로 타입 내보내기 (기존 코드와의 호환성 유지)
+export { Transaction, type TransactionResponse } from '@/lib/notion-types';
+
+// 추가 타입이 필요한 경우, lib/notion-types.ts에 추가하세요. 

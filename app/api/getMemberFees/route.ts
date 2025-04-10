@@ -1,42 +1,7 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS } from '@/lib/notion';
 import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
-
-interface NotionMemberProperties {
-  Name: {
-    title: Array<{
-      plain_text: string;
-    }>;
-  };
-  nick: {
-    rich_text: Array<{
-      plain_text: string;
-    }>;
-  };
-  deduction: {
-    multi_select: Array<{
-      id: string;
-      name: string;
-      color: string;
-    }>;
-  };
-}
-
-interface NotionFeeProperties {
-  date: {
-    date: {
-      start: string;
-    };
-  };
-  paid_fee: {
-    number: number;
-  };
-  method: {
-    multi_select: Array<{
-      name: string;
-    }>;
-  };
-}
+import { NotionMemberProperties, NotionFeeProperties } from '@/lib/notion-types';
 
 export async function POST(request: Request) {
   try {
@@ -72,7 +37,7 @@ export async function POST(request: Request) {
     //console.log('Deduction field:', properties.deduction);  // 필드 이름 확인
 
     // multi_select 배열에 'senior'가 있는지 확인
-    const isElder = properties.deduction.multi_select.some(item => item.name === 'senior');
+    const isElder = properties.deduction?.multi_select.some(item => item.name === 'senior') || false;
     const requiredFee = isElder ? 200000 : 720000;
 
     //console.log('Deduction values:', properties.deduction.multi_select.map(item => item.name));

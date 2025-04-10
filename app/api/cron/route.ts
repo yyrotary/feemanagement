@@ -3,27 +3,6 @@ import { NextResponse } from 'next/server';
 // cron job의 마지막 실행 시간 추적을 위한 전역 변수
 let lastRunTime: Date | null = null;
 
-/**
- * GET 요청 처리 - cron job 상태 정보 반환
- */
-export async function GET() {
-  try {
-    const now = new Date();
-    
-    return NextResponse.json({
-      lastRun: lastRunTime ? lastRunTime.toISOString() : null,
-      currentTime: now.toISOString(),
-      nextRunTime: lastRunTime ? new Date(lastRunTime.getTime() + 2 * 60 * 1000).toISOString() : now.toISOString(),
-      status: 'active',
-    });
-  } catch (error) {
-    console.error('Cron 상태 조회 오류:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Cron 상태를 조회할 수 없습니다.' },
-      { status: 500 }
-    );
-  }
-}
 
 /**
  * POST 요청 처리 - cron job 실행 

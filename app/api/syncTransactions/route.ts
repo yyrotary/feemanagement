@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
 import { OAuth2Client } from 'google-auth-library';
+import { Transaction, NotionMemberProperties } from '@/lib/notion-types';
 
 // Gmail API 설정
 const GMAIL_USER = 'me'; // 'me'는 인증된 사용자를 의미함
@@ -957,23 +958,14 @@ function formatDateTimeToISO8601(dateStr: string, emailDate: Date): string {
   }
 }
 
-interface Transaction {
-  date: string;
-  in: number;
-  out: number;
-  balance: number;
-  description: string;
-  branch?: string;
-  bank?: string;
-  memo?: string;
-}
-
 // 중복 트랜잭션 필터링
 function filterDuplicates(newTransactions: Transaction[], existingTransactions: Transaction[]) {
   console.log(`기존 트랜잭션: ${existingTransactions.length}개`);
   
   // 날짜별로 기존 트랜잭션을 그룹화
   const existingTransactionsByDate = new Map<string, Transaction[]>();
+  
+  // 날짜별로 기존 트랜잭션 정리
   existingTransactions.forEach(tx => {
     const date = tx.date?.split('T')[0] || '';
     if (!existingTransactionsByDate.has(date)) {
@@ -984,43 +976,55 @@ function filterDuplicates(newTransactions: Transaction[], existingTransactions: 
 
   // 적요에서 공백을 제거하고 앞 4글자만 추출하는 함수
   const getNormalizedDescription = (desc: string): string => {
-    return (desc || '').replace(/\s/g, '').substring(0, 4);
+    // null이나 undefined 처리 및 공백 제거 후 앞 4글자 추출
+    const cleaned = (desc || '').replace(/\s+/g, '');
+    return cleaned.substring(0, 4);
   };
 
+  // 새 트랜잭션 중 중복되지 않은 것만 필터링
   const filteredTransactions = newTransactions.filter(newTx => {
     // 날짜의 T 이전 부분만 비교 (시간 제외)
     const newDate = newTx.date?.split('T')[0] || '';
+    
+    // 날짜가 없는 경우 처리
     if (!newDate) {
-      console.log(`날짜가 없는 트랜잭션 발견:`, JSON.stringify(newTx, null, 2));
+      console.log(`날짜가 없는 트랜잭션 제외:`, JSON.stringify(newTx, null, 2));
       return false;
     }
 
-    // 해당 날짜의 기존 트랜잭션만 가져옴
+    // 해당 날짜의 기존 트랜잭션만 가져와 비교 (성능 최적화)
     const sameDateTransactions = existingTransactionsByDate.get(newDate) || [];
+    if (sameDateTransactions.length === 0) {
+      // 같은 날짜의 기존 트랜잭션이 없으면 중복이 아님
+      return true;
+    }
     
-    // 기존 트랜잭션과 비교
+    // 정규화된 설명 (공백 제거 후 앞 4글자)
+    const newDesc = getNormalizedDescription(newTx.description);
+    
+    // 기존 트랜잭션과 비교하여 중복 여부 확인
     const isDuplicate = sameDateTransactions.some(existingTx => {
-      // 1. 입출금 금액 비교
+      // 1. 입출금 금액 비교 (빠른 조기 종료)
       if (existingTx.in !== newTx.in || existingTx.out !== newTx.out) {
         return false;
       }
 
-      // 2. 잔고 비교
+      // 2. 잔고 비교 (빠른 조기 종료)
       if (existingTx.balance !== newTx.balance) {
         return false;
       }
 
       // 3. 적요 비교 (공백 제거 후 앞 4글자)
       const existingDesc = getNormalizedDescription(existingTx.description);
-      const newDesc = getNormalizedDescription(newTx.description);
       
       return existingDesc === newDesc;
     });
     
+    // 중복이 아닌 경우에만 포함
     return !isDuplicate;
   });
   
-  console.log(`중복 제거 후 트랜잭션: ${filteredTransactions.length}개`);
+  console.log(`중복 제거 후 새로운 트랜잭션: ${filteredTransactions.length}개`);
   return filteredTransactions;
 }
 
@@ -1063,17 +1067,19 @@ async function saveTransactionsToNotion(transactions: Array<{
     
     // 회원 정보 맵 생성 (이름과 닉네임으로 검색할 수 있도록)
     const memberMap = new Map<string, string>();
+    const memberNameMap = new Map<string, string>(); // ID -> 이름 맵 추가
     
     membersResponse.results.forEach((page: any) => {
       const id = page.id;
       // 이름 추출
       const name = page.properties.Name?.title?.[0]?.plain_text || '';
       // 닉네임 추출 (있는 경우)
-      const nickname = page.properties.Nickname?.rich_text?.[0]?.plain_text || '';
+      const nickname = page.properties.nick?.rich_text?.[0]?.plain_text || '';
       
       if (name) {
         // 이름으로 검색용 맵에 추가 (소문자, 공백 제거)
         memberMap.set(name.toLowerCase().replace(/\s+/g, ''), id);
+        memberNameMap.set(id, name); // ID -> 이름 맵에 추가
       }
       
       if (nickname) {
@@ -1104,7 +1110,7 @@ async function saveTransactionsToNotion(transactions: Array<{
     }
     
     // 새로운 거래내역 저장
-    const savePromises = newTransactions.map(transaction => {
+    const savePromises = newTransactions.map(async transaction => {
       const properties: any = {
         date: {
           type: 'date',
@@ -1146,22 +1152,47 @@ async function saveTransactionsToNotion(transactions: Array<{
         
         for (const [key, id] of memberMap.entries()) {
           // 회원 이름/닉네임이 3글자 이상이고 적요에 포함되어 있는 경우만 매칭
-          if (key.length >= 3 && cleanDescription.includes(key)) {
+          if (key.length >= 2 && cleanDescription.includes(key)) {
             foundMemberId = id;
             console.log(`거래내역 "${transaction.description}"에서 회원 "${key}" 찾음 (ID: ${id})`);
             break;
           }
         }
         
-        // 회원을 찾은 경우 관계형 필드 설정
+        // 회원을 찾은 경우 관계형 필드 설정 및 추가 처리
         if (foundMemberId) {
           properties.relatedmember = {
             type: 'relation',
             relation: [{ id: foundMemberId }]
           };
+          
+          // 추가 처리: 입금 내역의 적요에 따라 해당하는 DB에 항목 생성
+          const memberName = memberNameMap.get(foundMemberId) || '';
+          
+          try {
+            // 1. 회비 처리
+            if (cleanDescription.includes('회비')) {
+              console.log(`회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+              await createFeeRecord(foundMemberId, transaction.date, transaction.in);
+            }
+            // 2. 봉사금 처리
+            else if (cleanDescription.includes('봉사')) {
+              console.log(`봉사금 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+              await createServiceFeeRecord(foundMemberId, transaction.date, transaction.in);
+            }
+            // 3. 특별회비/경조사 처리
+            else if (cleanDescription.includes('특별') || cleanDescription.includes('경조')) {
+              console.log(`특별회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+              await createSpecialFeeRecord(foundMemberId, transaction.date, transaction.in);
+            }
+          } catch (error) {
+            console.error(`회원 ${memberName}의 입금 내역 처리 중 오류:`, error);
+            // 계속 진행 (메인 거래내역은 저장)
+          }
         }
       }
       
+      // 거래내역 생성
       return notionClient.pages.create({
         parent: { database_id: TRANSACTIONS_DB_ID },
         properties: properties,
@@ -1173,6 +1204,96 @@ async function saveTransactionsToNotion(transactions: Array<{
     return newTransactions.length;
   } catch (error) {
     console.error('거래내역 저장 중 오류:', error);
+    throw error;
+  }
+}
+
+// 회비 내역 생성 함수
+async function createFeeRecord(memberId: string, date: string, amount: number) {
+  try {
+    await notionClient.pages.create({
+      parent: { database_id: DATABASE_IDS.FEES },
+      properties: {
+        id: {
+          title: [{ text: { content: `회비_${new Date().getTime()}` } }]
+        },
+        name: {
+          relation: [{ id: memberId }]
+        },
+        date: {
+          date: { start: date.split('T')[0] } // 시간 부분 제거
+        },
+        paid_fee: {
+          number: amount
+        },
+        method: {
+          multi_select: [{ name: '입금' }]
+        }
+      }
+    });
+    console.log(`회비 내역 생성 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
+  } catch (error) {
+    console.error('회비 내역 생성 중 오류:', error);
+    throw error;
+  }
+}
+
+// 봉사금 내역 생성 함수
+async function createServiceFeeRecord(memberId: string, date: string, amount: number) {
+  try {
+    await notionClient.pages.create({
+      parent: { database_id: DATABASE_IDS.SERVICE_FEES },
+      properties: {
+        id: {
+          title: [{ text: { content: `봉사금_${new Date().getTime()}` } }]
+        },
+        name: {
+          relation: [{ id: memberId }]
+        },
+        date: {
+          date: { start: date.split('T')[0] } // 시간 부분 제거
+        },
+        paid_fee: {
+          number: amount
+        },
+        method: {
+          multi_select: [{ name: '입금' }]
+        }
+      }
+    });
+    console.log(`봉사금 내역 생성 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
+  } catch (error) {
+    console.error('봉사금 내역 생성 중 오류:', error);
+    throw error;
+  }
+}
+
+// 특별회비 내역 생성 함수
+async function createSpecialFeeRecord(memberId: string, date: string, amount: number) {
+  try {
+    await notionClient.pages.create({
+      parent: { database_id: DATABASE_IDS.SPECIAL_FEES },
+      properties: {
+        이름: {
+          title: [{ text: { content: `특별회비_${new Date().getTime()}` } }]
+        },
+        name: {
+          relation: [{ id: memberId }]
+        },
+        date: {
+          date: { start: date.split('T')[0] } // 시간 부분 제거
+        },
+        paid_fee: {
+          number: amount
+        },
+        method: {
+          multi_select: [{ name: '입금' }]
+        }
+      }
+    });
+    console.log(`특별회비 내역 생성 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
+  } catch (error) {
+    console.error('특별회비 내역 생성 중 오류:', error);
     throw error;
   }
 }
