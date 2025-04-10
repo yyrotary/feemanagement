@@ -1,16 +1,36 @@
 import { NextResponse } from 'next/server';
 
+// cron-job.org에서 설정한 비밀 키를 확인하는 상수
+const CRON_SECRET = process.env.CRON_SECRET
+
 /**
- * POST 요청 처리 - cron job 실행 
+ * GET 요청 처리 - cron job 실행 
  */
-export async function POST() {
+export async function GET(request: Request) {
   try {
+    // 현재 시간 기록
     const now = new Date();
-    console.log(`Cron 작업 시작`);
- 
+    console.log(`[${now.toISOString()}] Cron job 실행 시작`);
+    
+    // 요청에서 인증 토큰 확인
+    const url = new URL(request.url);
+    const authToken = url.searchParams.get('token');
+    
+    // 인증 토큰 검증
+    if (!authToken || authToken !== CRON_SECRET) {
+      console.log(`[${now.toISOString()}] 인증 실패: 유효하지 않은 토큰`);
+      return NextResponse.json({ 
+        status: 'error', 
+        message: '인증에 실패했습니다.' 
+      }, { status: 401 });
+    }
+    
+    // 마지막 실행 시간 기록 (선택 사항)
+    const lastRunTime = now;
+    
     // updateTransactions API 호출
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-    const updateApiUrl = `${baseUrl}/api/updateTransactions`;
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+    const updateApiUrl = new URL('/api/updateTransactions', baseUrl);
     
     console.log(`[${now.toISOString()}] API 호출 중: ${updateApiUrl}`);
     
@@ -27,20 +47,21 @@ export async function POST() {
     }
     
     const result = await response.json();
-    console.log(`[${now.toISOString()}] 거래내역 업데이트 완료:`, JSON.stringify(result, null, 2));
-    
-    
     
     return NextResponse.json({
       status: 'success',
-      time: now.toISOString(),
-      result
+      message: '거래내역 업데이트 cron 작업 완료',
+      result,
+      lastRun: lastRunTime.toISOString(),
+      executedAt: now.toISOString()
     });
+    
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Cron 작업 오류:`, error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Cron 작업을 실행할 수 없습니다.' },
-      { status: 500 }
-    );
+    console.error('Cron 작업 실행 중 오류 발생:', error);
+    return NextResponse.json({ 
+      status: 'error', 
+      error: 'Cron 작업 실행 중 오류 발생', 
+      details: error instanceof Error ? error.message : String(error) 
+    }, { status: 500 });
   }
 } 
