@@ -12,18 +12,7 @@ export async function POST() {
   try {
     const now = new Date();
     console.log(`[${now.toISOString()}] Cron 작업 시작: 최신 거래내역 업데이트`);
-    
-    // 마지막 실행 시간 확인 (최소 2분 간격 유지)
-    if (lastRunTime && now.getTime() - lastRunTime.getTime() < 2 * 60 * 1000) {
-      console.log(`마지막 실행(${lastRunTime.toISOString()})으로부터 2분이 경과하지 않았습니다. 건너뜁니다.`);
-      return NextResponse.json({
-        status: 'skipped',
-        message: '마지막 실행으로부터 2분이 경과하지 않았습니다.',
-        lastRun: lastRunTime.toISOString(),
-        currentTime: now.toISOString()
-      });
-    }
-    
+ 
     // updateTransactions API 호출
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     const updateApiUrl = `${baseUrl}/api/updateTransactions`;
