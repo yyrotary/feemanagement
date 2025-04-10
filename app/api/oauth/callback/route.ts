@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
-import fs from 'fs';
-import path from 'path';
 import { OAuth2Client } from 'google-auth-library';
-
-const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
-const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 
 // 배포 환경에 따른 리다이렉트 URI 설정
 const getRedirectUri = () => {
@@ -25,12 +20,16 @@ const getRedirectUri = () => {
 
 const REDIRECT_URI = getRedirectUri();
 
-
 // 인증 정보 저장 함수
 async function saveCredentials(client: OAuth2Client) {
   try {
-    const content = fs.readFileSync(CREDENTIALS_PATH, 'utf-8');
-    const keys = JSON.parse(content);
+    // 환경 변수에서 인증 정보 가져오기
+    const credentials = process.env.GOOGLE_CREDENTIALS;
+    if (!credentials) {
+      throw new Error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
+    }
+    
+    const keys = JSON.parse(credentials);
     const key = keys.installed || keys.web;
     const payload = JSON.stringify({
       type: 'authorized_user',
@@ -38,8 +37,16 @@ async function saveCredentials(client: OAuth2Client) {
       client_secret: key.client_secret,
       refresh_token: client.credentials.refresh_token,
     });
-    fs.writeFileSync(TOKEN_PATH, payload);
-    console.log('인증 정보가 저장되었습니다:', TOKEN_PATH);
+    
+    // 환경 변수에 저장하는 대신 콘솔에 출력 (실제로는 Vercel 환경 변수에 설정해야 함)
+    console.log('인증 정보를 환경 변수 GOOGLE_TOKEN에 저장해야 합니다:');
+    console.log(payload);
+    console.log('Vercel 대시보드에서 환경 변수 GOOGLE_TOKEN에 위 값을 설정하세요.');
+    
+    // 개발 환경에서만 임시로 메모리에 저장
+    if (process.env.NODE_ENV !== 'production') {
+      process.env.GOOGLE_TOKEN = payload;
+    }
   } catch (err) {
     console.error('인증 정보 저장 오류:', err);
     throw new Error('인증 정보를 저장할 수 없습니다.');
@@ -66,9 +73,13 @@ export async function GET(request: Request) {
     
     console.log('인증 코드 수신 성공');
     
-    // 인증 클라이언트 생성
-    const content = fs.readFileSync(CREDENTIALS_PATH, 'utf-8');
-    const keys = JSON.parse(content);
+    // 환경 변수에서 인증 정보 가져오기
+    const credentials = process.env.GOOGLE_CREDENTIALS;
+    if (!credentials) {
+      throw new Error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
+    }
+    
+    const keys = JSON.parse(credentials);
     const key = keys.installed || keys.web;
     
     const oAuth2Client = new google.auth.OAuth2(

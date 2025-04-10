@@ -1,40 +1,35 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-
-const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 
 // 인증 상태 조회 API
 export async function GET() {
   try {
-    console.log('토큰 파일 경로:', TOKEN_PATH);
-    // 토큰 파일 존재 여부 확인
-    const isAuthenticated = fs.existsSync(TOKEN_PATH);
+    // 환경 변수에서 토큰 확인
+    const token = process.env.GOOGLE_TOKEN;
+    const isAuthenticated = Boolean(token);
     
-    // 토큰 파일이 있으면 내용도 확인
+    // 토큰이 있으면 내용도 확인
     let tokenValid = false;
     
     if (isAuthenticated) {
       try {
-        const content = fs.readFileSync(TOKEN_PATH, 'utf-8');
-        const token = JSON.parse(content);
+        const tokenObj = JSON.parse(token!);
         
         // 최소한의 필수 필드가 있는지 확인
         tokenValid = Boolean(
-          token.type === 'authorized_user' && 
-          token.client_id && 
-          token.client_secret && 
-          token.refresh_token
+          tokenObj.type === 'authorized_user' && 
+          tokenObj.client_id && 
+          tokenObj.client_secret && 
+          tokenObj.refresh_token
         );
       } catch (err) {
-        console.error('토큰 파일 읽기 오류:', err);
+        console.error('토큰 파싱 오류:', err);
         tokenValid = false;
       }
     }
     
     return NextResponse.json({ 
       isAuthenticated: isAuthenticated && tokenValid,
-      lastUpdated: isAuthenticated ? fs.statSync(TOKEN_PATH).mtime : null
+      tokenSource: process.env.NODE_ENV === 'production' ? 'environment' : 'environment or memory'
     });
   } catch (error) {
     console.error('인증 상태 확인 오류:', error);
