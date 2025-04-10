@@ -6,6 +6,8 @@ import path from 'path';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
 import { OAuth2Client } from 'google-auth-library';
+import { Transaction, InternalTransaction } from '@/app/types/transaction';
+import { NotionMemberProperties, NotionTransactionProperties } from '@/app/types/notionProperties';
 
 // Gmail API 설정
 const GMAIL_USER = 'me'; // 'me'는 인증된 사용자를 의미함
@@ -957,17 +959,6 @@ function formatDateTimeToISO8601(dateStr: string, emailDate: Date): string {
   }
 }
 
-interface Transaction {
-  date: string;
-  in: number;
-  out: number;
-  balance: number;
-  description: string;
-  branch?: string;
-  bank?: string;
-  memo?: string;
-}
-
 // 중복 트랜잭션 필터링
 function filterDuplicates(newTransactions: Transaction[], existingTransactions: Transaction[]) {
   console.log(`기존 트랜잭션: ${existingTransactions.length}개`);
@@ -1137,7 +1128,7 @@ async function saveTransactionsToNotion(transactions: Array<{
       };
       
       // 입금인 경우 적요에서 회원 정보 찾기
-      if (transaction.in > 0 && transaction.description) {
+      if (transaction.in && transaction.in > 0 && transaction.description) {
         // 적요에서 공백 제거하고 소문자로 변환
         const cleanDescription = transaction.description.toLowerCase().replace(/\s+/g, '');
         

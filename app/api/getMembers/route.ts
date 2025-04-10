@@ -1,14 +1,8 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS } from '@/lib/notion';
 import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
-
-interface NotionMemberProperties {
-  Name: {
-    title: Array<{
-      plain_text: string;
-    }>;
-  };
-}
+import { NotionMemberProperties } from '@/app/types/notionProperties';
+import { Member, MemberResponse } from '@/app/types/member';
 
 export async function GET() {
   try {
@@ -22,7 +16,7 @@ export async function GET() {
       ]
     });
 
-    const members = response.results.map((page) => {
+    const members: Member[] = response.results.map((page) => {
       const pageObj = page as PageObjectResponse;
       const properties = pageObj.properties as unknown as NotionMemberProperties;
       return {
@@ -31,7 +25,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(members);
+    return NextResponse.json({ members } as MemberResponse);
   } catch (error) {
     console.error('Error fetching members:', error);
     return NextResponse.json(
