@@ -94,15 +94,6 @@ async function getGmailClient() {
 
 // 보안메일 인증 처리 함수
 async function processSecureEmail(htmlContent: string): Promise<string> {
-  // 임시 HTML 파일 저장
-  const tempDir = path.join(process.cwd(), 'temp');
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-  }
-  
-  const tempHtmlPath = path.join(tempDir, `secure_mail_${Date.now()}.html`);
-  fs.writeFileSync(tempHtmlPath, htmlContent);
-  
   let browser;
   try {
     // 브라우저 실행 - Vercel 환경에 맞게 수정
@@ -128,34 +119,11 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
     // 브라우저 콘솔 로그를 서버 콘솔에 출력
     page.on('console', msg => console.log('브라우저 콘솔:', msg.text()));
     
-    // 페이지 이동 감지 이벤트 등록
-    page.on('framenavigated', frame => {
-      if (frame === page.mainFrame()) {
-        console.log('페이지 이동 감지:', frame.url());
-      }
-    });
-    
-    // 임시 HTML 파일 열기
-    await page.goto(`file://${tempHtmlPath}`, { 
+    // HTML 컨텐츠를 직접 설정
+    await page.setContent(htmlContent, {
       waitUntil: 'networkidle0',
       timeout: 30000
     });
-    
-    // 현재 디렉토리의 경로 기록
-    const dirPath = path.dirname(tempHtmlPath);
-    console.log('현재 디렉토리 경로:', dirPath);
-    
-    // 현재 페이지 내용 확인
-    const pageContent = await page.content();
-    
-    // 디버깅용 스크린샷 저장
-    const screenshotPath = path.join(tempDir, `secure_mail_screenshot_${Date.now()}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
-    console.log(`인증 전 스크린샷 저장됨: ${screenshotPath}`);
-    
-    // 로그 남기기
-    console.log('보안메일 페이지 로드됨');
-    console.log('현재 페이지 URL:', page.url());
     
     // 인증 필요 여부 확인
     const needAuth = await page.evaluate(() => {
@@ -167,7 +135,7 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
     
     if (!needAuth) {
       console.log('이 페이지는 인증이 필요 없거나 이미 인증되었습니다.');
-      return pageContent;
+      return await page.content();
     }
     
     console.log('인증이 필요한 보안메일 확인됨, 인증 시도 중...');
@@ -180,278 +148,50 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
       const inputSelector = 'input[type="text"], input[type="password"], input:not([type])';
       await page.waitForSelector(inputSelector, { timeout: 5000 });
       
-      // 페이지에 있는 모든 입력 필드 확인
-      const inputFields = await page.$$eval(inputSelector, inputs => {
-        return inputs.map((input: any) => ({
-          type: input.type,
-          id: input.id,
-          name: input.name,
-          placeholder: input.placeholder
-        }));
-      });
-      
-      console.log('찾은 입력 필드:', JSON.stringify(inputFields));
-      
       // 인증번호 입력
       await page.evaluate((code) => {
         const inputs = document.querySelectorAll('input[type="text"], input[type="password"], input:not([type])');
         if(inputs.length > 0) {
           (inputs[0] as HTMLInputElement).value = code;
-          console.log('인증번호 입력됨:', code);
         }
-      }, VERIFICATION_CODE);
+      }, process.env.VERIFICATION_CODE || '5088260376');
       
-      console.log('인증번호 입력됨:', VERIFICATION_CODE);
-      
-      // 인증 버튼 찾기
+      // 인증 버튼 찾기 및 클릭
       const buttonSelectors = [
-        // 우선 '확인'값을 가진 submit 버튼 먼저 시도
         'input[type="submit"][value="확인"]',
         'input[value="확인"]',
         'input#confirm[type="submit"]',
         'input#confirm',
-        // 그 다음 일반적인 선택자
-        'input[type="submit"]', 
-        'input[id*="confirm"]',
-        'input[name*="confirm"]',
+        'input[type="submit"]',
         'button#confirm',
-        'button[id*="confirm"]',
-        'input[type="button"]',
-        'button', 
+        'button',
         'a.btn',
         '[onclick]'
       ];
       
-      // 각 선택자 시도
       for (const selector of buttonSelectors) {
-        const buttons = await page.$$(selector);
-        if (buttons.length > 0) {
-          console.log(`버튼 찾음: ${selector}, 개수: ${buttons.length}`);
-          
-          // 버튼의 텍스트 또는 값을 기준으로 가장 적합한 버튼 선택
-          const buttonInfo = await page.$$eval(selector, buttons => {
-            return buttons.map((btn: any) => ({
-              text: btn.textContent?.trim(),
-              value: btn.value,
-              type: btn.type,
-              id: btn.id,
-              name: btn.name,
-              class: btn.className,
-              onclick: btn.getAttribute('onclick')
-            }));
-          });
-          
-          console.log('찾은 버튼들:', JSON.stringify(buttonInfo));
-          
-          // 중요: "확인" 값이나 "submit" 타입을 가진 버튼 바로 선택
-          let targetButtonIndex = -1;
-          
-          // 먼저 "확인" 값을 가진 버튼 또는 submit 타입 중에서 고르기
-          for (let i = 0; i < buttonInfo.length; i++) {
-            const value = buttonInfo[i].value?.toLowerCase() || '';
-            const type = buttonInfo[i].type?.toLowerCase() || '';
-            
-            if (value === '확인' || type === 'submit') {
-              targetButtonIndex = i;
-              console.log(`"확인" 값 또는 "submit" 타입 버튼 발견 (인덱스: ${i})`);
-              break;
-            }
-          }
-          
-          // 일치하는 것이 없으면 기존 로직 계속 진행
-          if (targetButtonIndex === -1) {
-            // 확인, 인증, 전송 등의 텍스트가 포함된 버튼 찾기
-            const confirmKeywords = ['확인', '인증', '전송', '제출', '조회', 'confirm', 'verify', 'submit', 'ok'];
-            const cancelKeywords = ['취소', '닫기', 'cancel', 'close'];
-            
-            // 1. 우선순위: ID나 name이 confirm인 버튼
-            for (let i = 0; i < buttonInfo.length; i++) {
-              const id = buttonInfo[i].id?.toLowerCase() || '';
-              const name = buttonInfo[i].name?.toLowerCase() || '';
-              
-              if (id === 'confirm' || name === 'confirm') {
-                targetButtonIndex = i;
-                console.log('confirm ID/name 매치 찾음:', i);
-                break;
-              }
-            }
-            
-            // 2. ID/name에 confirm 단어 포함
-            if (targetButtonIndex === -1) {
-              for (let i = 0; i < buttonInfo.length; i++) {
-                const id = buttonInfo[i].id?.toLowerCase() || '';
-                const name = buttonInfo[i].name?.toLowerCase() || '';
-                
-                if (id.includes('confirm') || id.includes('submit') || 
-                    name.includes('confirm') || name.includes('submit')) {
-                  targetButtonIndex = i;
-                  console.log('confirm/submit이 포함된 ID/name 매치 찾음:', i);
-                  break;
-                }
-              }
-            }
-            
-            // 3. 값이나 텍스트에 키워드 매치
-            if (targetButtonIndex === -1) {
-              for (let i = 0; i < buttonInfo.length; i++) {
-                const buttonText = buttonInfo[i].text?.toLowerCase() || '';
-                const buttonValue = buttonInfo[i].value?.toLowerCase() || '';
-                
-                // 취소 버튼 제외
-                let isCancel = false;
-                for (const keyword of cancelKeywords) {
-                  if (buttonText.includes(keyword) || buttonValue.includes(keyword)) {
-                    isCancel = true;
-                    break;
-                  }
-                }
-                
-                if (isCancel) continue;
-                
-                // 확인 키워드 매치
-                for (const keyword of confirmKeywords) {
-                  if (buttonText.includes(keyword) || buttonValue.includes(keyword)) {
-                    targetButtonIndex = i;
-                    console.log(`키워드 '${keyword}' 매치 찾음:`, i);
-                    break;
-                  }
-                }
-                
-                if (targetButtonIndex !== -1) break;
-              }
-            }
-            
-            // 4. submit 타입의 버튼 찾기
-            if (targetButtonIndex === -1) {
-              for (let i = 0; i < buttonInfo.length; i++) {
-                if (buttonInfo[i].type === 'submit') {
-                  targetButtonIndex = i;
-                  console.log('submit 타입 버튼 찾음:', i);
-                  break;
-                }
-              }
-            }
-            
-            // 취소가 아닌 첫 번째 버튼 선택 (최후의 수단)
-            if (targetButtonIndex === -1) {
-              for (let i = 0; i < buttonInfo.length; i++) {
-                const buttonText = buttonInfo[i].text?.toLowerCase() || '';
-                const buttonValue = buttonInfo[i].value?.toLowerCase() || '';
-                const id = buttonInfo[i].id?.toLowerCase() || '';
-                
-                let isCancel = false;
-                for (const keyword of cancelKeywords) {
-                  if (buttonText.includes(keyword) || buttonValue.includes(keyword) || 
-                      id.includes(keyword)) {
-                    isCancel = true;
-                    break;
-                  }
-                }
-                
-                if (!isCancel) {
-                  targetButtonIndex = i;
-                  console.log('취소가 아닌 첫 버튼 선택:', i);
-                  break;
-                }
-              }
-            }
-          }
-          
-          // 여전히 버튼을 찾지 못한 경우 첫 번째 버튼 선택
-          if (targetButtonIndex === -1) {
-            targetButtonIndex = 0;
-            console.log('기본값: 첫 번째 버튼 선택');
-          }
-          
-          console.log(`선택된 버튼 인덱스: ${targetButtonIndex}, 정보:`, JSON.stringify(buttonInfo[targetButtonIndex]));
-          
-          // 선택된 버튼 클릭
-          try {
-            await buttons[targetButtonIndex].click({ delay: 100 });
-            console.log('인증 버튼 클릭됨');
-            buttonFound = true;
-            
-            // 클릭 후 잠시 대기
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            break;
-          } catch (clickError) {
-            console.error('버튼 클릭 실패:', clickError);
-            // 디버깅을 위한 추가 정보
-            console.log('클릭 실패한 버튼 정보:', JSON.stringify(buttonInfo[targetButtonIndex]));
-            
-            // 클릭에 실패한 경우 JavaScript로 직접 클릭 이벤트 트리거 시도
-            try {
-              await page.evaluate((idx) => {
-                const buttons = document.querySelectorAll('input[type="submit"], input#confirm, input[id*="confirm"], button#confirm, button[id*="confirm"], input[type="button"], button, a.btn, [onclick]');
-                if (buttons[idx]) {
-                  console.log('자바스크립트로 클릭 시도:', buttons[idx]);
-                  (buttons[idx] as HTMLElement).click();
-                  return true;
-                }
-                return false;
-              }, targetButtonIndex);
-              console.log('자바스크립트로 버튼 클릭 시도됨');
-              buttonFound = true;
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              break;
-            } catch (jsClickError) {
-              console.error('자바스크립트 클릭도 실패:', jsClickError);
-              // 다음 선택자 시도
-              continue;
-            }
-          }
+        const button = await page.$(selector);
+        if (button) {
+          await button.click();
+          buttonFound = true;
+          await page.waitForTimeout(1000);
+          break;
         }
       }
-    } catch (inputError) {
-      console.error('입력 필드 또는 버튼 찾기 실패:', inputError);
-    }
-    
-    // 버튼을 찾지 못한 경우, doAction() 함수 직접 호출 시도
-    if (!buttonFound) {
-      try {
-        console.log('버튼을 찾지 못했거나 클릭에 실패함. doAction() 함수 직접 호출 시도...');
-        
-        // 농협 보안메일에서 주로 사용하는 doAction() 함수 직접 호출
-        const actionResult = await page.evaluate(() => {
-          // doAction 함수가 전역 스코프에 있는지 확인
+      
+      if (!buttonFound) {
+        // doAction 함수 호출 시도
+        await page.evaluate(() => {
           if (typeof (window as any).doAction === 'function') {
-            console.log('doAction 함수 발견, 호출 시도');
             (window as any).doAction();
-            return true;
-          } else if (document.querySelector('a[href*="doAction"]')) {
-            console.log('doAction 링크 발견, 클릭 시도');
-            (document.querySelector('a[href*="doAction"]') as HTMLElement).click();
             return true;
           }
           return false;
         });
-        
-        if (actionResult) {
-          console.log('doAction() 함수 호출 성공');
-          // 인증 시도 완료로 표시
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } else {
-          console.log('doAction() 함수를 찾지 못함. 엔터 키 입력 시도...');
-          await page.keyboard.press('Enter');
-          console.log('엔터 키 입력됨');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      } catch (actionError) {
-        console.error('doAction 호출 실패:', actionError);
-        console.log('마지막 수단으로 엔터 키 입력 시도...');
-        await page.keyboard.press('Enter');
-        console.log('엔터 키 입력됨');
-        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-    }
-    
-    // 인증 후 메시지 페이지로 리디렉션 처리
-    console.log('인증 후 Message.html 또는 거래내역 테이블 대기 중...');
-    
-    try {
-      // 메시지 리디렉션 확인을 위한 대기
+      
+      // 처리된 결과 대기
       await page.waitForFunction(() => {
-        // 테이블 또는 거래내역 관련 키워드가 포함된 요소 찾기
         const bodyText = document.body?.textContent || '';
         return document.querySelector('table') !== null ||
                bodyText.includes('거래내역') ||
@@ -460,98 +200,17 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
                bodyText.includes('잔액');
       }, { timeout: 10000 });
       
-      console.log('인증 후 콘텐츠 로드 확인됨');
-      
-      // 현재 URL 확인
-      const currentUrl = page.url();
-      console.log('인증 후 현재 URL:', currentUrl);
-      
-      // Message.html 파일이 있는지 확인
-      const messageHtmlPath = path.join(path.dirname(tempHtmlPath), 'Message.html');
-      if (fs.existsSync(messageHtmlPath)) {
-        console.log('Message.html 파일 발견, 해당 파일 내용으로 대체');
-        
-        // Message.html 열기 시도
-        try {
-          await page.goto(`file://${messageHtmlPath}`, { waitUntil: 'networkidle0', timeout: 10000 });
-          console.log('Message.html 파일로 이동 성공');
-        } catch (navError) {
-          console.error('Message.html 탐색 오류:', navError);
-          // 오류 발생 시 직접 파일 읽기
-          if (fs.existsSync(messageHtmlPath)) {
-            const messageHtmlContent = fs.readFileSync(messageHtmlPath, 'utf-8');
-            await page.setContent(messageHtmlContent);
-            console.log('Message.html 내용 직접 설정됨');
-          }
-        }
-      }
-      
-      // 인증 후 스크린샷 저장
-      try {
-        const afterAuthScreenshotPath = path.join(tempDir, `after_auth_screenshot_${Date.now()}.png`);
-        await page.screenshot({ 
-          path: afterAuthScreenshotPath, 
-          fullPage: true
-        });
-        console.log(`인증 후 스크린샷 저장됨: ${afterAuthScreenshotPath}`);
-      } catch (screenshotError) {
-        console.error('스크린샷 저장 실패:', screenshotError);
-        // 스크린샷 실패는 치명적 오류가 아님 - 진행 계속
-      }
-    } catch (waitError) {
-      console.error('인증 후 콘텐츠 로드 대기 실패:', waitError);
-      console.log('타임아웃 발생, 현재 페이지 콘텐츠로 진행');
-      
-      // Message.html 파일 직접 확인
-      const messageHtmlPath = path.join(path.dirname(tempHtmlPath), 'Message.html');
-      if (fs.existsSync(messageHtmlPath)) {
-        console.log('Message.html 파일 발견, 해당 파일 내용 확인');
-        
-        try {
-          const messageHtmlContent = fs.readFileSync(messageHtmlPath, 'utf-8');
-          // 메시지 파일에 테이블이 있는지 확인
-          if (messageHtmlContent.includes('<table') && 
-              (messageHtmlContent.includes('거래내역') || 
-               messageHtmlContent.includes('입금') || 
-               messageHtmlContent.includes('출금'))) {
-            console.log('Message.html 파일에서 거래내역 테이블 발견');
-            await page.setContent(messageHtmlContent);
-            console.log('Message.html 내용으로 페이지 설정됨');
-          }
-        } catch (readError) {
-          console.error('Message.html 파일 읽기 오류:', readError);
-        }
-      }
+    } catch (error) {
+      console.error('인증 처리 중 오류:', error);
     }
     
-    // 처리된 HTML 가져오기 - 타임아웃 처리 추가
-    let processedHtml = '';
-    try {
-      processedHtml = await page.content();
-    } catch (contentError) {
-      console.error('페이지 콘텐츠 가져오기 실패:', contentError);
-      // 인증은 성공했을 수 있으므로 Message.html 확인
-      const messageHtmlPath = path.join(path.dirname(tempHtmlPath), 'Message.html');
-      if (fs.existsSync(messageHtmlPath)) {
-        processedHtml = fs.readFileSync(messageHtmlPath, 'utf-8');
-        console.log('Message.html 내용 직접 반환');
-      } else {
-        // 그래도 실패하면 원본 반환
-        return htmlContent;
-      }
-    }
+    // 최종 HTML 반환
+    return await page.content();
     
-    // 디버깅용 처리된 HTML 저장
-    const processedHtmlPath = path.join(tempDir, `processed_mail_${Date.now()}.html`);
-    fs.writeFileSync(processedHtmlPath, processedHtml);
-    console.log(`처리된 HTML 파일 저장됨: ${processedHtmlPath}`);
-    
-    return processedHtml;
   } catch (error) {
     console.error('보안메일 처리 중 오류:', error);
-    throw new Error(`보안메일 처리 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
   } finally {
-    // 브라우저 종료 및 임시 파일 삭제
     if (browser) {
       await browser.close();
     }
@@ -600,16 +259,22 @@ async function getTransactionEmails(
   }
 }
 
-// 메일 첨부 파일(HTML) 다운로드 및 처리 - 메일 발송 시간 추가
+// 메일 첨부 파일(HTML) 다운로드 및 처리
 async function downloadAttachment(gmail: any, messageId: string, emailDate: Date) {
   try {
-    console.log(`메시지 ID ${messageId}의 첨부파일 처리 중...`);
+    console.log(`메시지 ID ${messageId}의 첨부파일 처리 시작...`);
     
     // 전체 메시지 정보 가져오기
+    console.log('Gmail API로 메시지 정보 요청 중...');
     const message = await gmail.users.messages.get({
       userId: 'me',
       id: messageId,
+    }).catch(error => {
+      console.error('Gmail API 메시지 조회 실패:', error);
+      throw error;
     });
+    
+    console.log('메시지 정보 받음:', message.data.id);
     
     if (!message.data.payload) {
       console.warn(`메시지 ID ${messageId}에 페이로드가 없음`);
@@ -620,23 +285,29 @@ async function downloadAttachment(gmail: any, messageId: string, emailDate: Date
     const { parts } = message.data.payload;
     let htmlContent = '';
     
+    console.log(`메시지 파트 수: ${parts?.length || 0}`);
+    
     // HTML 또는 텍스트 컨텐츠 추출
     if (message.data.payload.body && message.data.payload.body.data) {
+      console.log('메시지 바디에서 직접 컨텐츠 추출 시도...');
       const body = message.data.payload.body.data;
       htmlContent = Buffer.from(body, 'base64').toString('utf-8');
-      console.log(`메시지 바디에서 직접 컨텐츠 추출 (길이: ${htmlContent.length})`);
+      console.log(`메시지 바디에서 직접 컨텐츠 추출 완료 (길이: ${htmlContent.length})`);
     }
     
     // 페이로드 파트 처리
     if (parts && parts.length > 0) {
-      console.log(`메시지에 ${parts.length}개의 파트 발견`);
+      console.log(`메시지의 ${parts.length}개 파트 처리 중...`);
       
       for (const part of parts) {
+        console.log(`파트 처리 중: ${part.mimeType}`);
+        
         // 텍스트 또는 HTML 파트 처리
         if (part.mimeType === 'text/html' && part.body.data) {
+          console.log('HTML 파트 발견, 디코딩 중...');
           const decodedBody = Buffer.from(part.body.data, 'base64').toString('utf-8');
           htmlContent = decodedBody;
-          console.log(`HTML 컨텐츠 발견 (길이: ${htmlContent.length})`);
+          console.log(`HTML 컨텐츠 디코딩 완료 (길이: ${htmlContent.length})`);
           break;
         }
         // 멀티파트 처리 (재귀적)
@@ -644,9 +315,10 @@ async function downloadAttachment(gmail: any, messageId: string, emailDate: Date
           console.log(`멀티파트 발견, 재귀적으로 처리 중...`);
           for (const subPart of part.parts) {
             if (subPart.mimeType === 'text/html' && subPart.body.data) {
+              console.log('멀티파트 내 HTML 파트 발견, 디코딩 중...');
               const decodedBody = Buffer.from(subPart.body.data, 'base64').toString('utf-8');
               htmlContent = decodedBody;
-              console.log(`멀티파트 내 HTML 컨텐츠 발견 (길이: ${htmlContent.length})`);
+              console.log(`멀티파트 내 HTML 컨텐츠 디코딩 완료 (길이: ${htmlContent.length})`);
               break;
             }
           }
@@ -654,21 +326,26 @@ async function downloadAttachment(gmail: any, messageId: string, emailDate: Date
         // 첨부파일 처리
         else if (part.filename && part.body.attachmentId) {
           console.log(`첨부파일 발견: ${part.filename}`);
-          const attachment = await gmail.users.messages.attachments.get({
-            userId: 'me',
-            messageId: messageId,
-            id: part.body.attachmentId,
-          });
-          
-          if (attachment.data.data) {
-            const attachmentData = Buffer.from(attachment.data.data, 'base64');
-            console.log(`첨부파일 데이터 크기: ${attachmentData.length} 바이트`);
+          try {
+            const attachment = await gmail.users.messages.attachments.get({
+              userId: 'me',
+              messageId: messageId,
+              id: part.body.attachmentId,
+            });
             
-            // HTML 파일인 경우
-            if (part.filename.endsWith('.html') || part.mimeType === 'text/html') {
-              htmlContent = attachmentData.toString('utf-8');
-              console.log(`HTML 첨부파일 컨텐츠 추출 (길이: ${htmlContent.length})`);
+            if (attachment.data.data) {
+              console.log(`첨부파일 데이터 크기: ${attachment.data.data.length} 바이트`);
+              const attachmentData = Buffer.from(attachment.data.data, 'base64');
+              
+              // HTML 파일인 경우
+              if (part.filename.endsWith('.html') || part.mimeType === 'text/html') {
+                console.log('HTML 첨부파일 처리 중...');
+                htmlContent = attachmentData.toString('utf-8');
+                console.log(`HTML 첨부파일 컨텐츠 추출 완료 (길이: ${htmlContent.length})`);
+              }
             }
+          } catch (error) {
+            console.error(`첨부파일 처리 중 오류:`, error);
           }
         }
       }
@@ -676,16 +353,26 @@ async function downloadAttachment(gmail: any, messageId: string, emailDate: Date
     
     // HTML 내용이 있는 경우 처리
     if (htmlContent) {
+      console.log('HTML 내용 처리 중...');
+      
       // HTML이 보안 이메일인지 확인
       if (htmlContent.includes('보안메일') || 
           htmlContent.includes('SecureMail') || 
           htmlContent.includes('안전한 메일')) {
         console.log('보안 이메일 감지됨, 특수 처리 중...');
-        htmlContent = await processSecureEmail(htmlContent);
+        try {
+          htmlContent = await processSecureEmail(htmlContent);
+          console.log('보안 이메일 처리 완료');
+        } catch (error) {
+          console.error('보안 이메일 처리 중 오류:', error);
+          throw error;
+        }
       }
       
-      // 거래내역 파싱 (이메일 날짜 전달)
+      // 거래내역 파싱
+      console.log('거래내역 파싱 시작...');
       const transactions = parseTransactionData(htmlContent, emailDate);
+      console.log(`거래내역 파싱 완료: ${transactions.length}개 발견`);
       return transactions;
     } else {
       console.log(`메시지 ID ${messageId}에서 HTML 컨텐츠를 찾을 수 없음`);
