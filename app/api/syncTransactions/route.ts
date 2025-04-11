@@ -556,7 +556,7 @@ async function getTransactionEmails(
   pageToken?: string | null, 
   olderThanDate?: Date,
   sinceDate?: Date,
-  batchSize: number = 5  // 기본값 증가
+  batchSize: number = 500  // 기본값 증가
 ) {
   // 검색 쿼리 구성
   let query = 'from:nonghyupcorp.com OR from:webmaster@ums.nonghyup.com OR subject:"입출금" OR subject:"거래내역" OR subject:"계좌" OR subject:"농협"';
@@ -1074,7 +1074,7 @@ async function saveTransactionsToNotion(transactions: Array<{
       // 이름 추출
       const name = page.properties.Name?.title?.[0]?.plain_text || '';
       // 닉네임 추출 (있는 경우)
-      const nickname = page.properties.nick?.rich_text?.[0]?.plain_text || '';
+      const nickname = page.properties.Nickname?.rich_text?.[0]?.plain_text || '';
       
       if (name) {
         // 이름으로 검색용 맵에 추가 (소문자, 공백 제거)
@@ -1152,7 +1152,7 @@ async function saveTransactionsToNotion(transactions: Array<{
         
         for (const [key, id] of memberMap.entries()) {
           // 회원 이름/닉네임이 3글자 이상이고 적요에 포함되어 있는 경우만 매칭
-          if (key.length >= 2 && cleanDescription.includes(key)) {
+          if (key.length >= 3 && cleanDescription.includes(key)) {
             foundMemberId = id;
             console.log(`거래내역 "${transaction.description}"에서 회원 "${key}" 찾음 (ID: ${id})`);
             break;
@@ -1310,7 +1310,7 @@ export async function GET(request: Request) {
     // 파라미터 변환
     let olderThanDate: Date | undefined;
     let sinceDate: Date | undefined;
-    let batchSize = 5; // 기본 배치 크기 증가
+    let batchSize = 5000; // 기본 배치 크기 증가
     
     if (olderThanParam) {
       try {

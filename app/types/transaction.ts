@@ -3,6 +3,6 @@
  */
 
 // lib/notion-types.ts로 타입 내보내기 (기존 코드와의 호환성 유지)
-export type { Transaction, TransactionResponse } from '@/lib/notion-types';
+export { Transaction, type TransactionResponse } from '@/lib/notion-types';
 
 // 추가 타입이 필요한 경우, lib/notion-types.ts에 추가하세요. 
