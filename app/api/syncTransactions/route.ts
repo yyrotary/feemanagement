@@ -96,8 +96,29 @@ async function getGmailClient() {
 async function processSecureEmail(htmlContent: string): Promise<string> {
   let browser;
   try {
-    console.log('Puppeteer를 사용한 보안메일 처리 시작...');
+    console.log('보안메일 처리 시작 - HTML 길이:', htmlContent.length);
     
+    // HTML에서 테이블 구조 확인 (인증 전)
+    console.log('HTML 테이블 확인 (인증 전):', htmlContent.includes('<table'));
+    
+    // 인증 필요 여부 기본 확인 (텍스트 기반)
+    const needAuth = htmlContent.includes('보안메일인증') || 
+                     htmlContent.includes('인증번호') ||
+                     htmlContent.includes('비밀번호') ||
+                     htmlContent.includes('확인') ||
+                     htmlContent.includes('인증');
+    
+    if (!needAuth) {
+      console.log('인증이 필요 없는 것으로 보입니다. 원본 HTML 반환');
+      return htmlContent;
+    }
+    
+    console.log('인증이 필요할 수 있습니다. 그러나 Vercel 환경에서 브라우저 실행 문제로 원본 HTML 반환');
+    
+    // Vercel 환경에서는 브라우저 실행 건너뛰기
+    return htmlContent;
+    
+    /* 아래 코드는 로컬 환경에서만 작동
     // 브라우저 실행 - Vercel 서버리스 환경에 맞게 설정
     const options: any = {
       headless: true,
@@ -230,9 +251,11 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
     const content = await page.content();
     await browser.close();
     return content;
+    */
+    
   } catch (error) {
     console.error('보안메일 처리 중 오류:', error);
-    throw error;
+    return htmlContent; // 오류 발생 시 원본 HTML 반환
   }
 }
 
