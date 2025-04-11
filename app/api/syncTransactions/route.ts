@@ -396,17 +396,7 @@ function parseTransactionData(htmlContent: string, emailDate: Date): Array<{
   bank: string;
 }> {
   try {
-    // 디버깅을 위해 HTML 내용 저장
-    const debugDir = path.join(process.cwd(), 'debug');
-    if (!fs.existsSync(debugDir)) {
-      fs.mkdirSync(debugDir, { recursive: true });
-    }
-    
-    const debugFilePath = path.join(debugDir, `parsed_mail_${Date.now()}.html`);
-    fs.writeFileSync(debugFilePath, htmlContent);
-    console.log(`디버깅용 HTML 파일 저장됨: ${debugFilePath}`);
-    
-    // HTML 내용 길이 로깅
+    // 디버깅용 로깅만 하고 파일 저장은 하지 않음
     console.log(`HTML 내용 길이: ${htmlContent.length} 바이트`);
     console.log(`HTML 시작 부분: ${htmlContent.substring(0, 200)}...`);
     

@@ -1,8 +1,14 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron",
-      "schedule": "0 1 * * *"
+
+  "functions": {
+    "app/api/syncTransactions/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
     }
-  ]
+  },
+  "build": {
+    "env": {
+      "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
+    }
+  }
 } 
