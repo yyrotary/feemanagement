@@ -96,20 +96,37 @@ async function getGmailClient() {
 async function processSecureEmail(htmlContent: string): Promise<string> {
   let browser;
   try {
-    // 브라우저 실행 - Vercel 환경에 맞게 수정
-    browser = await puppeteer.launch({
+    console.log('Puppeteer를 사용한 보안메일 처리 시작...');
+    
+    // 브라우저 실행 - Vercel 서버리스 환경에 맞게 설정
+    const options: any = {
       headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-        '--window-size=1920x1080',
-      ],
-      executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined,
-    });
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ]
+    };
     
+    // Chrome 실행 시도
+    try {
+      console.log('Chrome 실행 시도 중...');
+      browser = await puppeteer.launch(options);
+      console.log('Chrome 실행 성공');
+    } catch (browserError) {
+      console.error('Chrome 실행 실패:', browserError);
+      
+      // 오류가 발생하면 HTML 내용 그대로 반환
+      console.log('브라우저 실행 실패로 원본 HTML 반환');
+      return htmlContent;
+    }
+    
+    console.log('브라우저 페이지 생성 중...');
     const page = await browser.newPage();
     
     // 페이지 타임아웃 설정
@@ -120,12 +137,15 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
     page.on('console', msg => console.log('브라우저 콘솔:', msg.text()));
     
     // HTML 컨텐츠를 직접 설정
+    console.log('HTML 컨텐츠 로드 중...');
     await page.setContent(htmlContent, {
       waitUntil: 'networkidle0',
       timeout: 30000
     });
+    console.log('HTML 컨텐츠 로드 완료');
     
     // 인증 필요 여부 확인
+    console.log('인증 필요 여부 확인 중...');
     const needAuth = await page.evaluate(() => {
       const bodyText = document.body?.textContent || '';
       return bodyText.includes('보안메일인증') || 
@@ -135,7 +155,9 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
     
     if (!needAuth) {
       console.log('이 페이지는 인증이 필요 없거나 이미 인증되었습니다.');
-      return await page.content();
+      const content = await page.content();
+      await browser.close();
+      return content;
     }
     
     console.log('인증이 필요한 보안메일 확인됨, 인증 시도 중...');
@@ -205,15 +227,12 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
     }
     
     // 최종 HTML 반환
-    return await page.content();
-    
+    const content = await page.content();
+    await browser.close();
+    return content;
   } catch (error) {
     console.error('보안메일 처리 중 오류:', error);
     throw error;
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 }
 

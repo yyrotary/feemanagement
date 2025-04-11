@@ -1,14 +1,24 @@
 {
-
   "functions": {
     "app/api/syncTransactions/route.ts": {
-      "memory": 1024,
+      "memory": 3008,
       "maxDuration": 60
     }
   },
   "build": {
     "env": {
-      "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
+      "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "false"
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;"
+        }
+      ]
+    }
+  ]
 } 
