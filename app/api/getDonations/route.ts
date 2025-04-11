@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS } from '@/lib/notion';
-import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
+import { PageObjectResponse, QueryDatabaseParameters } from '@notionhq/client/build/src/api-endpoints';
 import { NotionMemberProperties, NotionDonationProperties } from '@/lib/notion-types';
 
 export async function GET(request: Request) {
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
 
   try {
     // 필터 옵션 설정
-    let filter: QueryDatabaseParameters['filter'];
+    let filter: QueryDatabaseParameters['filter'] | undefined;
     
     if (memberId) {
       // 특정 회원의 기부 내역 조회
