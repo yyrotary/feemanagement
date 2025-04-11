@@ -174,7 +174,7 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
         if (button) {
           await button.click();
           buttonFound = true;
-          await page.waitForTimeout(1000);
+          await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
           break;
         }
       }
@@ -1135,155 +1135,26 @@ export async function GET(request: Request) {
             // 오류가 발생해도 계속 진행
           }
         } else {
-          console.log(`이메일 ID ${messageId}에서 거래내역을 찾을 수 없음`);
+          console.log(`이메일 ID ${messageId}에서 거래내역을 추출할 수 없음`);
         }
-        
-        emailsProcessed++;
-        console.log(`처리 진행률: ${emailsProcessed}/${messages.length} (${Math.round(emailsProcessed/messages.length*100)}%)`);
-      } catch (err) {
-        console.error(`메시지 ID ${message.id} 처리 중 오류:`, err);
-        // 한 메일에서 오류가 발생해도 다음 메일 계속 처리
+      } catch (error) {
+        console.error(`이메일 ID ${messageId} 처리 중 오류:`, error);
       }
     }
     
-    console.log(`총 ${emailsProcessed}개의 이메일 처리 완료, ${totalSavedCount}개의 거래내역 저장됨`);
-    
     return NextResponse.json({ 
       status: 'success', 
-      message: '이메일 처리 완료', 
-      emailsProcessed,
+      message: '거래내역 동기화가 완료되었습니다.', 
       count: totalSavedCount,
-      processedMessageIds,
       nextPageToken: nextPageToken || null
     });
-    
   } catch (error) {
-    console.error('처리 중 오류 발생:', error);
+    console.error('거래내역 동기화 중 오류:', error);
     return NextResponse.json({ 
       status: 'error', 
-      error: '이메일 처리 중 오류 발생', 
-      details: error instanceof Error ? error.message : String(error) 
-    }, { status: 500 });
+      message: '거래내역 동기화 중 오류가 발생했습니다.', 
+      count: 0,
+      nextPageToken: null
+    });
   }
 }
-
-// POST 메서드 수정 - 메일 하나씩 처리하도록 변경
-export async function POST(request: Request) {
-  try {
-    console.log('POST 요청 처리 중...');
-    
-    // Gmail 클라이언트 인증
-    const gmail = await getGmailClient();
-    
-    // 거래내역 이메일 검색 (제한 없이 최대 500개까지)
-    console.log('거래내역 이메일 검색 중...');
-    const { messages, nextPageToken } = await getTransactionEmails(
-      gmail, 
-      null, 
-      undefined,
-      undefined,
-      500  // 최대 개수 증가
-    );
-    
-    console.log(`검색된 이메일 수: ${messages?.length || 0}`);
-    
-    if (!messages || messages.length === 0) {
-      return NextResponse.json({ 
-        status: 'success', 
-        message: '처리할 이메일이 없습니다.', 
-        count: 0,
-        nextPageToken: nextPageToken || null
-      });
-    }
-    
-    const allTransactions: any[] = [];
-    let emailsProcessed = 0;
-    let processedMessageIds: string[] = [];
-    let totalSavedCount = 0;
-    
-    // 메시지 순차 처리 (한 번에 하나씩)
-    console.log(`${messages.length}개의 이메일을 하나씩 순차적으로 처리 중...`);
-    
-    for (const message of messages) {
-      try {
-        const messageId = message.id;
-        processedMessageIds.push(messageId);
-        console.log(`이메일 처리 중 (ID: ${messageId})...`);
-        
-        // 이메일 헤더 정보 가져오기
-        const messageDetails = await gmail.users.messages.get({
-          userId: 'me',
-          id: messageId,
-          format: 'metadata',
-          metadataHeaders: ['Subject', 'From', 'Date'],
-        });
-        
-        const headers = messageDetails.data.payload?.headers || [];
-        const subjectHeader = headers.find(h => h.name === 'Subject');
-        const fromHeader = headers.find(h => h.name === 'From');
-        const dateHeader = headers.find(h => h.name === 'Date');
-        
-        const subject = subjectHeader?.value || 'No Subject';
-        const from = fromHeader?.value || 'Unknown Sender';
-        const dateStr = dateHeader?.value || '';
-        
-        // 이메일 날짜 추출
-        let emailDate = new Date();
-        if (dateStr) {
-          try {
-            emailDate = new Date(dateStr);
-          } catch (err) {
-            console.warn(`이메일 날짜 파싱 실패: ${dateStr}`);
-          }
-        }
-        
-        console.log(`이메일 제목: "${subject}", 보낸사람: "${from}", 날짜: ${emailDate.toISOString()}`);
-        
-        // 이메일에서 거래내역 추출
-        const transactions = await downloadAttachment(gmail, messageId, emailDate);
-        
-        // 거래내역이 있으면 즉시 Notion에 저장
-        if (transactions && transactions.length > 0) {
-          console.log(`이메일 ID ${messageId}에서 ${transactions.length}개의 거래내역 추출 성공`);
-          
-          // 각 이메일에서 추출한 거래내역 바로 저장
-          try {
-            const savedCount = await saveTransactionsToNotion(transactions);
-            console.log(`이메일 ID ${messageId}에서 ${savedCount}개의 거래내역 Notion에 저장 완료`);
-            totalSavedCount += savedCount;
-          } catch (saveError) {
-            console.error(`이메일 ID ${messageId} 거래내역 저장 중 오류:`, saveError);
-            // 오류가 발생해도 계속 진행
-          }
-        } else {
-          console.log(`이메일 ID ${messageId}에서 거래내역을 찾을 수 없음`);
-        }
-        
-        emailsProcessed++;
-        console.log(`처리 진행률: ${emailsProcessed}/${messages.length} (${Math.round(emailsProcessed/messages.length*100)}%)`);
-      } catch (err) {
-        console.error(`메시지 ID ${message.id} 처리 중 오류:`, err);
-        // 한 메일에서 오류가 발생해도 다음 메일 계속 처리
-      }
-    }
-    
-    console.log(`총 ${emailsProcessed}개의 이메일 처리 완료, ${totalSavedCount}개의 거래내역 저장됨`);
-    
-    return NextResponse.json({ 
-      status: 'success', 
-      message: '이메일 처리 완료', 
-      emailsProcessed,
-      count: totalSavedCount,
-      processedMessageIds,
-      nextPageToken: nextPageToken || null
-    });
-    
-  } catch (error) {
-    console.error('처리 중 오류 발생:', error);
-    return NextResponse.json({ 
-      status: 'error', 
-      error: '이메일 처리 중 오류 발생', 
-      details: error instanceof Error ? error.message : String(error) 
-    }, { status: 500 });
-  }
-} 
