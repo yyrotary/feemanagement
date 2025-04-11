@@ -1138,7 +1138,7 @@ export async function GET(request: Request) {
           console.log(`이메일 ID ${messageId}에서 거래내역을 추출할 수 없음`);
         }
       } catch (error) {
-        console.error(`이메일 ID ${messageId} 처리 중 오류:`, error);
+        console.error(`이메일 ID 처리 중 오류:`, error);
       }
     }
     
