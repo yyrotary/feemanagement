@@ -68,6 +68,7 @@ async function getGmailClient() {
     // 인증 정보 확인
     const credentials = process.env.GOOGLE_CREDENTIALS;
     if (!credentials) {
+      console.error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
       throw new Error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
     }
 
@@ -76,6 +77,7 @@ async function getGmailClient() {
     
     // 저장된 인증 정보가 없으면 새로 인증 진행 (서버에서는 불가능)
     if (!client) {
+      console.error('OAuth 인증 토큰이 없습니다. GOOGLE_TOKEN 환경 변수를 설정해야 합니다.');
       throw new Error('OAuth 인증 토큰이 없습니다. GOOGLE_TOKEN 환경 변수를 설정해야 합니다.');
     }
     
@@ -103,19 +105,25 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
   
   let browser;
   try {
-    // 브라우저 실행 - 타임아웃 설정 추가
+    // 브라우저 실행 - Vercel 환경에 맞게 수정
     browser = await puppeteer.launch({
-      headless: true, // headless 모드 사용
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      protocolTimeout: 60000, // 프로토콜 타임아웃 60초로 늘림
-      timeout: 60000 // 브라우저 시작 타임아웃도 60초로 설정
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--window-size=1920x1080',
+      ],
+      executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined,
     });
     
     const page = await browser.newPage();
     
     // 페이지 타임아웃 설정
-    await page.setDefaultNavigationTimeout(60000);
-    await page.setDefaultTimeout(60000);
+    await page.setDefaultNavigationTimeout(30000);
+    await page.setDefaultTimeout(30000);
     
     // 브라우저 콘솔 로그를 서버 콘솔에 출력
     page.on('console', msg => console.log('브라우저 콘솔:', msg.text()));
@@ -130,7 +138,7 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
     // 임시 HTML 파일 열기
     await page.goto(`file://${tempHtmlPath}`, { 
       waitUntil: 'networkidle0',
-      timeout: 60000 // 페이지 로드 타임아웃도 60초로 늘림
+      timeout: 30000
     });
     
     // 현재 디렉토리의 경로 기록
@@ -1040,10 +1048,22 @@ async function saveTransactionsToNotion(transactions: Array<{
   bank: string;
 }>) {
   try {
+    // Notion API 키 확인
+    if (!process.env.NOTION_API_KEY) {
+      console.error('NOTION_API_KEY 환경 변수가 설정되지 않았습니다.');
+      throw new Error('NOTION_API_KEY 환경 변수가 설정되지 않았습니다.');
+    }
+
     // 기존 거래내역 조회
+    console.log('Notion 데이터베이스에서 기존 거래내역 조회 중...');
     const existingResponse = await notionClient.databases.query({
       database_id: TRANSACTIONS_DB_ID,
+    }).catch(error => {
+      console.error('Notion 데이터베이스 조회 오류:', error);
+      throw new Error(`Notion 데이터베이스 조회 실패: ${error.message}`);
     });
+    
+    console.log(`기존 거래내역 ${existingResponse.results.length}개 발견`);
     
     const existingTransactions: Transaction[] = existingResponse.results.map((page: any) => ({
       date: page.properties.date?.date?.start || '',
@@ -1301,6 +1321,13 @@ async function createSpecialFeeRecord(memberId: string, date: string, amount: nu
 // GET 메서드 수정 - 메일 하나씩 처리하도록 변경
 export async function GET(request: Request) {
   try {
+    // 환경 변수 확인 로그 추가
+    console.log('환경 변수 확인:');
+    console.log('GOOGLE_CREDENTIALS:', process.env.GOOGLE_CREDENTIALS ? '설정됨' : '설정되지 않음');
+    console.log('GOOGLE_TOKEN:', process.env.GOOGLE_TOKEN ? '설정됨' : '설정되지 않음');
+    console.log('NOTION_API_KEY:', process.env.NOTION_API_KEY ? '설정됨' : '설정되지 않음');
+    console.log('TRANSACTIONS_DB_ID:', process.env.TRANSACTIONS_DB_ID ? '설정됨' : '설정되지 않음');
+
     // URL 파라미터 처리
     const url = new URL(request.url);
     const olderThanParam = url.searchParams.get('olderThan');
