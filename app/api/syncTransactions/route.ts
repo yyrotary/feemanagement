@@ -269,7 +269,7 @@ async function downloadAttachment(gmail: any, messageId: string, emailDate: Date
     const message = await gmail.users.messages.get({
       userId: 'me',
       id: messageId,
-    }).catch(error => {
+    }).catch((error: Error) => {
       console.error('Gmail API 메시지 조회 실패:', error);
       throw error;
     });
