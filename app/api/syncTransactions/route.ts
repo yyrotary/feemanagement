@@ -93,7 +93,7 @@ async function getGmailClient() {
 // 보안메일 인증 처리 함수
 async function processSecureEmail(htmlContent: string): Promise<string> {
   // 임시 HTML 파일 저장
-  const tempDir = path.join(process.cwd(), 'tmp');
+  const tempDir = path.join(process.cwd(), 'temp');
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true });
   }
@@ -105,18 +105,13 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
   let browser;
   try {
     // 브라우저 실행 - 타임아웃 설정 추가
-    browser = await puppeteer.launch({
-      headless: true, // headless 모드 사용
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      protocolTimeout: 60000, // 프로토콜 타임아웃 60초로 늘림
-      timeout: 60000 // 브라우저 시작 타임아웃도 60초로 설정
-    });
+    browser = await puppeteer.launch();
     
     const page = await browser.newPage();
     
     // 페이지 타임아웃 설정
-    await page.setDefaultNavigationTimeout(60000);
-    await page.setDefaultTimeout(60000);
+    //await page.setDefaultNavigationTimeout(60000);
+    //await page.setDefaultTimeout(60000);
     
     // 브라우저 콘솔 로그를 서버 콘솔에 출력
     page.on('console', msg => console.log('브라우저 콘솔:', msg.text()));
