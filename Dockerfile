@@ -58,9 +58,12 @@ RUN npm install
 COPY . .
 
 # 4. .cache 디렉토리 설정 및 권한 설정
-RUN mkdir -p ./.cache/puppeteer
+RUN mkdir -p /app/.cache/puppeteer
 ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
-RUN chmod -R 777 ./.cache
+RUN chmod -R 777 /app/.cache
+
+RUN mkdir -p /app/temp /app/debug
+RUN chmod -R 777 /app/temp /app/debug
 
 # 5. Puppeteer 브라우저 설치
 RUN npx puppeteer browsers install chrome
