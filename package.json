@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "npx puppeteer browsers install chrome"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^2.1.0",
@@ -39,5 +40,5 @@
     "eslint": "^9",
     "eslint-config-next": "15.2.4",
     "typescript": "^5"
-  }
-}
+  }  
+} 
