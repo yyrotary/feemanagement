@@ -51,15 +51,15 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # 2. 종속성 설치
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY package.json ./
+RUN npm install
 
 # 3. 소스 코드 복사
 COPY . .
 
 # 4. .cache 디렉토리 설정 및 권한 설정
 RUN mkdir -p ./.cache/puppeteer
-ENV PUPPETEER_CACHE_DIR=./.cache/puppeteer
+ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
 RUN chmod -R 777 ./.cache
 
 # 5. Puppeteer 브라우저 설치
@@ -71,7 +71,8 @@ RUN npm run build
 # 7. 실행 설정
 ENV PORT=3000
 ENV NODE_ENV=production
-ENV PUPPETEER_EXECUTABLE_PATH=/app/.cache/puppeteer/chrome/linux-118.0.5993.70/chrome-linux64/chrome
+ENV PUPPETEER_EXECUTABLE_PATH=/app/.cache/puppeteer/chrome/linux-122.0.6261.69/chrome-linux64/chrome
+ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
 
 EXPOSE 3000
 

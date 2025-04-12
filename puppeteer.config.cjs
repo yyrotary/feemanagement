@@ -7,6 +7,8 @@ module.exports = {
   // Docker 환경에서 필요한 옵션 추가
   browserRevision: 'latest',
   executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+  // 자동 다운로드 설정
+  skipDownload: false,
   // puppeteer 7.0.0+ 사용 시 필요한 설정
   browsers: [
     { name: 'chrome', revision: 'latest' }

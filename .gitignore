@@ -5,6 +5,12 @@ token.json
 .env.*
 google-credentials.json
 
+# Puppeteer cache
+/.cache/*
+!/.cache/puppeteer/
+/.cache/puppeteer/*
+!/.cache/puppeteer/.gitkeep
+
 # Dependencies
 /node_modules
 /.pnp

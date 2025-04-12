@@ -11,7 +11,17 @@
 
 ### 배포 방법
 
-1. GitHub에 코드 Push
+1. 의존성 설치 및 브라우저 설치
+
+```bash
+# 의존성 설치
+npm install
+
+# Puppeteer 브라우저 설치
+npm run install-browsers
+```
+
+2. GitHub에 코드 Push
 
 ```bash
 git add .
@@ -19,13 +29,13 @@ git commit -m "Docker 배포 설정 추가"
 git push
 ```
 
-2. Cloudtype 콘솔에서 배포 설정
+3. Cloudtype 콘솔에서 배포 설정
 
 - 새 배포 > GitHub 저장소 선택 > Docker 배포 방식 선택
 - 포트는 3000으로 설정
 - 환경 변수 설정 (필요한 경우)
 
-3. 배포 시작
+4. 배포 시작
 
 ### 주요 파일 설명
 
@@ -40,7 +50,7 @@ Cloudtype 콘솔에서 다음 환경 변수를 설정해야 합니다:
 
 ```
 NODE_ENV=production
-PUPPETEER_EXECUTABLE_PATH=/app/.cache/puppeteer/chrome/linux-118.0.5993.70/chrome-linux64/chrome
+PUPPETEER_EXECUTABLE_PATH=/app/.cache/puppeteer/chrome/linux-122.0.6261.69/chrome-linux64/chrome
 PUPPETEER_CACHE_DIR=./.cache/puppeteer
 ```
 
@@ -49,8 +59,8 @@ PUPPETEER_CACHE_DIR=./.cache/puppeteer
 로컬에서 Puppeteer를 사용하기 위해:
 
 ```bash
-# .cache 디렉토리에 Chrome 설치
-PUPPETEER_CACHE_DIR=./.cache/puppeteer npx puppeteer browsers install chrome
+# puppeteer 브라우저 설치
+npm run install-browsers
 ```
 
 ## 트러블슈팅
@@ -62,6 +72,7 @@ Chrome 실행 오류가 발생하면:
 1. Docker 내 필요한 라이브러리가 설치되었는지 확인
 2. Puppeteer 브라우저가 정상적으로 설치되었는지 확인
 3. 환경 변수가 올바르게 설정되었는지 확인
+4. Linux 환경에서 Chrome 경로가 올바른지 확인 (/app/.cache/puppeteer/chrome/linux-122.0.6261.69/chrome-linux64/chrome)
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
