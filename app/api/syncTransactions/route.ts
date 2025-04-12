@@ -93,12 +93,13 @@ async function getGmailClient() {
 // 보안메일 인증 처리 함수
 async function processSecureEmail(htmlContent: string): Promise<string> {
   // 임시 HTML 파일 저장
-  const tempDir = path.join(process.cwd(), 'temp');
+  const tempDir = path.join(process.cwd(), 'tmp');
   if (!fs.existsSync(tempDir)) {
     fs.mkdirSync(tempDir, { recursive: true });
   }
   
   const tempHtmlPath = path.join(tempDir, `secure_mail_${Date.now()}.html`);
+  console.log('tempHtmlPath:', tempHtmlPath);
   fs.writeFileSync(tempHtmlPath, htmlContent);
   
   let browser;

@@ -11,7 +11,7 @@ const getRedirectUri = () => {
   
   // 프로덕션 환경에서는 실제 도메인 사용
   if (isProduction) {
-    return 'https://port-next-yyrotary-m9dtm49kf3785cc5.sel4.cloudtype.app/api/oauth/callback';
+    return process.env.NEXT_PUBLIC_BASE_URL + '/api/oauth/callback';
   }
   
   // 개발 환경에서는 localhost 사용
