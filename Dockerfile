@@ -74,7 +74,7 @@ RUN npm run build
 # 7. 실행 설정
 ENV PORT=3000
 ENV NODE_ENV=production
-ENV PUPPETEER_EXECUTABLE_PATH=/app/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64
+ENV PUPPETEER_EXECUTABLE_PATH=/app/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome
 ENV PUPPETEER_CACHE_DIR=/app/.cache/puppeteer
 
 EXPOSE 3000
