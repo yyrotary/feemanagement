@@ -104,10 +104,16 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
   
   let browser;
   try {
-    // 브라우저 실행 - 타임아웃 설정 추가
+    // 브라우저 실행 - 타
     browser = await puppeteer.launch({
       headless: true,
-      userDataDir: '/root/.cache/puppeteer/chrome/linux-135.0.7049.42/chrome-linux64/chrome'
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+      ],
+      ignoreHTTPSErrors: true
     });
     
     const page = await browser.newPage();

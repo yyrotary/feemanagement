@@ -1,6 +1,0 @@
-{
-    "scripts": {
-      "postinstall": "npx puppeteer browsers install chrome"
-    }
-  }
-  
