@@ -1,0 +1,4 @@
+name: feemanagement
+app: dockerfile
+options:
+  ports: 3000 

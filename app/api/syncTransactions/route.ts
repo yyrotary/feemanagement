@@ -8,6 +8,14 @@ import puppeteer from 'puppeteer';
 import { OAuth2Client } from 'google-auth-library';
 import { Transaction, NotionMemberProperties } from '@/lib/notion-types';
 
+// 임시 파일 경로 저장 배열 추가
+const tempFilesToDelete: string[] = [];
+
+// Puppeteer 캐시 경로 설정 - 현재 프로젝트 폴더 내 .cache 사용
+const PUPPETEER_CACHE_DIR = path.join(process.cwd(), '.cache', 'puppeteer');
+// 환경 변수로 캐시 경로 설정 (puppeteer 실행 전 필요)
+process.env.PUPPETEER_CACHE_DIR = PUPPETEER_CACHE_DIR;
+
 // Gmail API 설정
 const GMAIL_USER = 'me'; // 'me'는 인증된 사용자를 의미함
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
@@ -100,16 +108,44 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
   
   const tempHtmlPath = path.join(tempDir, `secure_mail_${Date.now()}.html`);
   fs.writeFileSync(tempHtmlPath, htmlContent);
+  tempFilesToDelete.push(tempHtmlPath); // 삭제할 파일 목록에 추가
   
   let browser;
   try {
-    // 브라우저 실행 - 타임아웃 설정 추가
-    browser = await puppeteer.launch({
-      headless: true, // headless 모드 사용
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    // 브라우저 설치 여부 확인 - 프로젝트 폴더 내 .cache 사용
+    const browserExists = fs.existsSync(PUPPETEER_CACHE_DIR);
+    
+    if (!browserExists && !process.env.PUPPETEER_EXECUTABLE_PATH) {
+      // .cache 디렉토리 생성
+      if (!fs.existsSync(path.join(process.cwd(), '.cache'))) {
+        fs.mkdirSync(path.join(process.cwd(), '.cache'), { recursive: true });
+      }
+      
+      console.error('puppeteer 브라우저가 설치되지 않았습니다.');
+      throw new Error('Puppeteer 브라우저가 설치되지 않았습니다. "PUPPETEER_CACHE_DIR=./.cache/puppeteer npx puppeteer browsers install chrome"을 실행하여 설치해주세요.');
+    }
+    
+    // 브라우저 실행 옵션 설정
+    const launchOptions: any = {
+      headless: true, 
+      args: [
+        "--no-sandbox", 
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu"
+      ],
       protocolTimeout: 60000, // 프로토콜 타임아웃 60초로 늘림
       timeout: 60000 // 브라우저 시작 타임아웃도 60초로 설정
-    });
+    };
+    
+    // Docker 환경에서 실행 경로 설정
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      console.log(`Docker 환경 감지, 실행 경로 사용: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
+      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+    
+    // 브라우저 실행
+    browser = await puppeteer.launch(launchOptions);
     
     const page = await browser.newPage();
     
@@ -478,17 +514,19 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
         }
       }
       
-      // 인증 후 스크린샷 저장
-      try {
-        const afterAuthScreenshotPath = path.join(tempDir, `after_auth_screenshot_${Date.now()}.png`);
-        await page.screenshot({ 
-          path: afterAuthScreenshotPath, 
-          fullPage: true
-        });
-        console.log(`인증 후 스크린샷 저장됨: ${afterAuthScreenshotPath}`);
-      } catch (screenshotError) {
-        console.error('스크린샷 저장 실패:', screenshotError);
-        // 스크린샷 실패는 치명적 오류가 아님 - 진행 계속
+      // 인증 후 스크린샷 저장 - 스크린샷 저장을 디버그 모드에서만 실행하도록 변경
+      if (process.env.DEBUG_MODE === 'true') {
+        try {
+          const afterAuthScreenshotPath = path.join(tempDir, `after_auth_screenshot_${Date.now()}.png`);
+          await page.screenshot({ 
+            path: afterAuthScreenshotPath, 
+            fullPage: true
+          });
+          tempFilesToDelete.push(afterAuthScreenshotPath); // 삭제할 파일 목록에 추가
+          console.log(`인증 후 스크린샷 저장됨: ${afterAuthScreenshotPath}`);
+        } catch (screenshotError) {
+          console.error('스크린샷 저장 실패:', screenshotError);
+        }
       }
     } catch (waitError) {
       console.error('인증 후 콘텐츠 로드 대기 실패:', waitError);
@@ -533,10 +571,13 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
       }
     }
     
-    // 디버깅용 처리된 HTML 저장
-    const processedHtmlPath = path.join(tempDir, `processed_mail_${Date.now()}.html`);
-    fs.writeFileSync(processedHtmlPath, processedHtml);
-    console.log(`처리된 HTML 파일 저장됨: ${processedHtmlPath}`);
+    // 디버깅용 처리된 HTML 저장 - 디버그 모드에서만 실행
+    if (process.env.DEBUG_MODE === 'true') {
+      const processedHtmlPath = path.join(tempDir, `processed_mail_${Date.now()}.html`);
+      fs.writeFileSync(processedHtmlPath, processedHtml);
+      tempFilesToDelete.push(processedHtmlPath); // 삭제할 파일 목록에 추가
+      console.log(`처리된 HTML 파일 저장됨: ${processedHtmlPath}`);
+    }
     
     return processedHtml;
   } catch (error) {
@@ -547,7 +588,29 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
     if (browser) {
       await browser.close();
     }
+    
+    // 임시 파일 정리
+    cleanupTempFiles();
   }
+}
+
+// 임시 파일 정리 함수 추가
+function cleanupTempFiles() {
+  console.log(`${tempFilesToDelete.length}개의 임시 파일 정리 중...`);
+  
+  for (const filePath of tempFilesToDelete) {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`임시 파일 삭제됨: ${filePath}`);
+      }
+    } catch (error) {
+      console.error(`임시 파일 ${filePath} 삭제 중 오류:`, error);
+    }
+  }
+  
+  // 정리 후 배열 초기화
+  tempFilesToDelete.length = 0;
 }
 
 // 메일 목록 가져오기 (NH농협 거래내역 메일)
@@ -701,15 +764,18 @@ function parseTransactionData(htmlContent: string, emailDate: Date): Array<{
   bank: string;
 }> {
   try {
-    // 디버깅을 위해 HTML 내용 저장
-    const debugDir = path.join(process.cwd(), 'debug');
-    if (!fs.existsSync(debugDir)) {
-      fs.mkdirSync(debugDir, { recursive: true });
+    // 디버깅을 위해 HTML 내용 저장 - 디버그 모드에서만 실행
+    if (process.env.DEBUG_MODE === 'true') {
+      const debugDir = path.join(process.cwd(), 'debug');
+      if (!fs.existsSync(debugDir)) {
+        fs.mkdirSync(debugDir, { recursive: true });
+      }
+      
+      const debugFilePath = path.join(debugDir, `parsed_mail_${Date.now()}.html`);
+      fs.writeFileSync(debugFilePath, htmlContent);
+      tempFilesToDelete.push(debugFilePath); // 삭제할 파일 목록에 추가
+      console.log(`디버깅용 HTML 파일 저장됨: ${debugFilePath}`);
     }
-    
-    const debugFilePath = path.join(debugDir, `parsed_mail_${Date.now()}.html`);
-    fs.writeFileSync(debugFilePath, htmlContent);
-    console.log(`디버깅용 HTML 파일 저장됨: ${debugFilePath}`);
     
     // HTML 내용 길이 로깅
     console.log(`HTML 내용 길이: ${htmlContent.length} 바이트`);
@@ -888,6 +954,9 @@ function parseTransactionData(htmlContent: string, emailDate: Date): Array<{
   } catch (error) {
     console.error('거래내역 파싱 오류:', error);
     throw new Error(`HTML에서 거래내역을 추출할 수 없습니다: ${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    // 임시 파일 정리
+    cleanupTempFiles();
   }
 }
 
@@ -1450,6 +1519,9 @@ export async function GET(request: Request) {
       error: '이메일 처리 중 오류 발생', 
       details: error instanceof Error ? error.message : String(error) 
     }, { status: 500 });
+  } finally {
+    // 임시 파일 정리
+    cleanupTempFiles();
   }
 }
 
@@ -1571,5 +1643,8 @@ export async function POST(request: Request) {
       error: '이메일 처리 중 오류 발생', 
       details: error instanceof Error ? error.message : String(error) 
     }, { status: 500 });
+  } finally {
+    // 임시 파일 정리
+    cleanupTempFiles();
   }
 } 

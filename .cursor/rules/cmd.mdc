@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+- You can @ files here
+- You can use markdown but dont have to
+These rules guide Cursor's AI when generating terminal commands for a Windows-only environment. Due to execution problems with PowerShell, we neet to ensure only CMD commands are used.

@@ -1,0 +1,37 @@
+# 기본 무시 항목
+node_modules
+npm-debug.log
+.git
+.github
+.vscode
+.next
+
+# 캐시 및 로그 파일
+.cache/*
+!.cache/puppeteer
+.cache/puppeteer/*
+!.cache/puppeteer/.gitkeep
+temp
+debug
+logs
+
+# 환경 변수 및 인증 파일
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+google-credentials.json
+credentials.json
+token.json
+
+# 빌드 파일
+*.tsbuildinfo
+next-env.d.ts
+
+# 기타 파일
+README.md
+CHANGELOG.md
+LICENSE
+*.md
+!README.md 

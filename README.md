@@ -1,3 +1,68 @@
+# 회비 관리 시스템
+
+## Cloudtype Docker 배포 안내
+
+이 프로젝트는 Puppeteer가 포함된 Next.js 애플리케이션으로, Cloudtype에 Docker 방식으로 배포하도록 구성되어 있습니다.
+
+### 배포 전 준비사항
+
+1. Cloudtype 계정 및 프로젝트 생성
+2. GitHub 저장소 연결
+
+### 배포 방법
+
+1. GitHub에 코드 Push
+
+```bash
+git add .
+git commit -m "Docker 배포 설정 추가"
+git push
+```
+
+2. Cloudtype 콘솔에서 배포 설정
+
+- 새 배포 > GitHub 저장소 선택 > Docker 배포 방식 선택
+- 포트는 3000으로 설정
+- 환경 변수 설정 (필요한 경우)
+
+3. 배포 시작
+
+### 주요 파일 설명
+
+- `Dockerfile`: Puppeteer를 포함한 Docker 환경 구성
+- `.cloudtype.yaml`: Cloudtype 배포 설정
+- `puppeteer.config.cjs`: Puppeteer 설정 및 캐시 디렉토리 지정
+- `.cache/puppeteer`: Puppeteer 브라우저 캐시 디렉토리
+
+### 환경 변수 설정
+
+Cloudtype 콘솔에서 다음 환경 변수를 설정해야 합니다:
+
+```
+NODE_ENV=production
+PUPPETEER_EXECUTABLE_PATH=/app/.cache/puppeteer/chrome/linux-118.0.5993.70/chrome-linux64/chrome
+PUPPETEER_CACHE_DIR=./.cache/puppeteer
+```
+
+### 로컬 개발 환경 설정
+
+로컬에서 Puppeteer를 사용하기 위해:
+
+```bash
+# .cache 디렉토리에 Chrome 설치
+PUPPETEER_CACHE_DIR=./.cache/puppeteer npx puppeteer browsers install chrome
+```
+
+## 트러블슈팅
+
+### Puppeteer 관련 오류
+
+Chrome 실행 오류가 발생하면:
+
+1. Docker 내 필요한 라이브러리가 설치되었는지 확인
+2. Puppeteer 브라우저가 정상적으로 설치되었는지 확인
+3. 환경 변수가 올바르게 설정되었는지 확인
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

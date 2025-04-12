@@ -23,7 +23,7 @@
     "nodemailer": "^6.10.0",
     "papaparse": "^5.5.2",
     "parse5": "^7.2.1",
-    "puppeteer": "^24.6.0",
+    "puppeteer": "^21.10.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-toastify": "^11.0.5",
