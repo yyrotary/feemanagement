@@ -152,4 +152,153 @@
   .buttonContainer {
     justify-content: center;
   }
+}
+
+/* 스케줄러 스타일 */
+.section {
+  margin-bottom: 2rem;
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sectionTitle {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.schedulerStatus {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  border: 1px solid #eee;
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 1rem 0;
+}
+
+.button {
+  padding: 8px 16px;
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.button:hover:not(:disabled) {
+  background-color: #0051c3;
+}
+
+.button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.warningButton {
+  background-color: #ff6b6b;
+}
+
+.warningButton:hover:not(:disabled) {
+  background-color: #e74c3c;
+}
+
+.scheduleInfo {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #666;
+  background-color: #f2f8ff;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border-left: 3px solid #0070f3;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  color: #666;
+}
+
+/* 스케줄러 설정 폼 스타일 */
+.schedulerConfigForm {
+  background-color: #f5f8ff;
+  padding: 1rem;
+  border-radius: 4px;
+  margin: 1rem 0 1.5rem;
+  border: 1px solid #e0e7ff;
+}
+
+.configTitle {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.configField {
+  margin-bottom: 0.75rem;
+}
+
+.configField label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #444;
+}
+
+.configInputGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.configInput {
+  width: 100px;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.configUnit {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.configHelp {
+  font-size: 0.85rem;
+  color: #666;
+  margin-left: 4px;
+}
+
+.configSaveButton {
+  margin-top: 1rem;
+  padding: 8px 16px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.configSaveButton:hover:not(:disabled) {
+  background-color: #43a047;
+}
+
+.configSaveButton:disabled {
+  background-color: #a5d6a7;
+  cursor: not-allowed;
 } 
