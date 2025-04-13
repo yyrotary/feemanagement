@@ -39,36 +39,7 @@ async function loadSavedCredentialsIfExist() {
   }
 }
 
-// 인증 정보 저장 (Vercel 환경에서는 실제로 저장되지 않음, 로그만 출력)
-async function saveCredentials(client: OAuth2Client) {
-  try {
-    const credentials = process.env.GOOGLE_CREDENTIALS;
-    if (!credentials) {
-      throw new Error('GOOGLE_CREDENTIALS 환경 변수가 설정되지 않았습니다.');
-    }
-    
-    const keys = JSON.parse(credentials);
-    const key = keys.installed || keys.web;
-    const payload = JSON.stringify({
-      type: 'authorized_user',
-      client_id: key.client_id,
-      client_secret: key.client_secret,
-      refresh_token: client.credentials.refresh_token,
-    });
-    
-    // 환경 변수에 저장하는 대신 콘솔에 출력 (실제로는 Vercel 환경 변수에 설정해야 함)
-    console.log('인증 정보를 환경 변수 GOOGLE_TOKEN에 저장해야 합니다:');
-    console.log(payload);
-    
-    // 개발 환경을 위한 임시 저장 (테스트용)
-    if (process.env.NODE_ENV !== 'production') {
-      process.env.GOOGLE_TOKEN = payload;
-    }
-  } catch (err) {
-    console.error('인증 정보 저장 오류:', err);
-    throw new Error('인증 정보를 저장할 수 없습니다.');
-  }
-}
+
 
 // Gmail API 인증
 async function getGmailClient() {

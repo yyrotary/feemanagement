@@ -216,8 +216,25 @@ export async function POST(request: Request) {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`거래내역 동기화 API 호출 실패: ${errorData.error || response.statusText}`);
+      // 오류 응답 처리 개선
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const errorData = await response.json();
+        throw new Error(`거래내역 동기화 API 호출 실패: ${errorData.error || response.statusText}`);
+      } else {
+        // HTML 또는 다른 형식의 오류 응답 처리
+        const text = await response.text();
+        console.log('API가 JSON이 아닌 응답을 반환했습니다:', text.substring(0, 100));
+        throw new Error(`거래내역 동기화 API 호출 실패: 예상치 못한 응답 형식 (${response.status} ${response.statusText})`);
+      }
+    }
+    
+    // 응답 유형 확인
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.log('API가 JSON이 아닌 응답을 반환했습니다:', text.substring(0, 100));
+      throw new Error('거래내역 동기화 API가 JSON이 아닌 형식으로 응답했습니다.');
     }
     
     const result = await response.json();
