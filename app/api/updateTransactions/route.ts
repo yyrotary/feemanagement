@@ -150,6 +150,9 @@ function filterDuplicates(newTransactions: any[], existingTransactions: any[]) {
   return filteredTransactions;
 }
 
+
+
+
 // POST 메서드 - 최신 거래내역부터 업데이트
 export async function POST(request: Request) {
   try {
@@ -210,7 +213,7 @@ export async function POST(request: Request) {
     
     // AbortController로 타임아웃 설정
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55초 타임아웃 (60초 한도보다 약간 짧게)
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5분 타임아웃
     
     try {
       const response = await fetch(apiUrl.toString(), {
@@ -266,7 +269,7 @@ export async function POST(request: Request) {
       // AbortError 타임아웃 오류 처리
       if (error instanceof Error && error.name === 'AbortError') {
         return NextResponse.json({ 
-          error: '거래내역 동기화 시간 초과 (55초). 클라우드타입 무료티어 타임아웃 제한에 도달했습니다.',
+          error: '거래내역 동기화 시간 초과 (5분). 클라우드타입 하비티어어 타임아웃 제한에 도달했습니다.',
           transactions: []
         }, { status: 504 });
       }
