@@ -176,11 +176,6 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
     // 현재 페이지 내용 확인
     const pageContent = await page.content();
     
-    // 디버깅용 스크린샷 저장
-    const screenshotPath = path.join(tempDir, `secure_mail_screenshot_${Date.now()}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
-    console.log(`인증 전 스크린샷 저장됨: ${screenshotPath}`);
-    
     // 로그 남기기
     console.log('보안메일 페이지 로드됨');
     console.log('현재 페이지 URL:', page.url());
@@ -494,18 +489,19 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
       const currentUrl = page.url();
       console.log('인증 후 현재 URL:', currentUrl);
       
-      // Message.html 파일이 있는지 확인
-      const messageHtmlPath = path.join(path.dirname(tempHtmlPath), 'Message.html');
+      // 경로를 OS에 맞게 정규화
+      const messageHtmlPath = path.resolve(__dirname, 'message.html');
+
       if (fs.existsSync(messageHtmlPath)) {
         console.log('Message.html 파일 발견, 해당 파일 내용으로 대체');
         
-        // Message.html 열기 시도
         try {
-          await page.goto(`file://${messageHtmlPath}`, { waitUntil: 'networkidle0', timeout: 10000 });
+          // URL 인코딩 추가 및 경로 정규화
+          const fileUrl = `file://${encodeURI(messageHtmlPath)}`;
+          await page.goto(fileUrl, { waitUntil: 'networkidle0', timeout: 10000 });
           console.log('Message.html 파일로 이동 성공');
         } catch (navError) {
           console.error('Message.html 탐색 오류:', navError);
-          // 오류 발생 시 직접 파일 읽기
           if (fs.existsSync(messageHtmlPath)) {
             const messageHtmlContent = fs.readFileSync(messageHtmlPath, 'utf-8');
             await page.setContent(messageHtmlContent);
@@ -513,21 +509,11 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
           }
         }
       }
-      
-      // 인증 후 스크린샷 저장 - 스크린샷 저장을 디버그 모드에서만 실행하도록 변경
-      if (process.env.DEBUG_MODE === 'true') {
-        try {
-          const afterAuthScreenshotPath = path.join(tempDir, `after_auth_screenshot_${Date.now()}.png`);
-          await page.screenshot({ 
-            path: afterAuthScreenshotPath, 
-            fullPage: true
-          });
-          tempFilesToDelete.push(afterAuthScreenshotPath); // 삭제할 파일 목록에 추가
-          console.log(`인증 후 스크린샷 저장됨: ${afterAuthScreenshotPath}`);
-        } catch (screenshotError) {
-          console.error('스크린샷 저장 실패:', screenshotError);
-        }
-      }
+
+
+
+      // Message.html 파일이 있는지 확인
+
     } catch (waitError) {
       console.error('인증 후 콘텐츠 로드 대기 실패:', waitError);
       console.log('타임아웃 발생, 현재 페이지 콘텐츠로 진행');
@@ -569,14 +555,6 @@ async function processSecureEmail(htmlContent: string): Promise<string> {
         // 그래도 실패하면 원본 반환
         return htmlContent;
       }
-    }
-    
-    // 디버깅용 처리된 HTML 저장 - 디버그 모드에서만 실행
-    if (process.env.DEBUG_MODE === 'true') {
-      const processedHtmlPath = path.join(tempDir, `processed_mail_${Date.now()}.html`);
-      fs.writeFileSync(processedHtmlPath, processedHtml);
-      tempFilesToDelete.push(processedHtmlPath); // 삭제할 파일 목록에 추가
-      console.log(`처리된 HTML 파일 저장됨: ${processedHtmlPath}`);
     }
     
     return processedHtml;
@@ -764,19 +742,6 @@ function parseTransactionData(htmlContent: string, emailDate: Date): Array<{
   bank: string;
 }> {
   try {
-    // 디버깅을 위해 HTML 내용 저장 - 디버그 모드에서만 실행
-    if (process.env.DEBUG_MODE === 'true') {
-      const debugDir = path.join(process.cwd(), 'debug');
-      if (!fs.existsSync(debugDir)) {
-        fs.mkdirSync(debugDir, { recursive: true });
-      }
-      
-      const debugFilePath = path.join(debugDir, `parsed_mail_${Date.now()}.html`);
-      fs.writeFileSync(debugFilePath, htmlContent);
-      tempFilesToDelete.push(debugFilePath); // 삭제할 파일 목록에 추가
-      console.log(`디버깅용 HTML 파일 저장됨: ${debugFilePath}`);
-    }
-    
     // HTML 내용 길이 로깅
     console.log(`HTML 내용 길이: ${htmlContent.length} 바이트`);
     console.log(`HTML 시작 부분: ${htmlContent.substring(0, 200)}...`);
