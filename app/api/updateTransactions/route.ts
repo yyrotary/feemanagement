@@ -208,47 +208,77 @@ export async function POST(request: Request) {
     
     console.log(`API 호출 URL: ${apiUrl.toString()}`);
     
-    const response = await fetch(apiUrl.toString(), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-    });
+    // AbortController로 타임아웃 설정
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 55000); // 55초 타임아웃 (60초 한도보다 약간 짧게)
     
-    if (!response.ok) {
-      // 오류 응답 처리 개선
+    try {
+      const response = await fetch(apiUrl.toString(), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        signal: controller.signal
+      });
+      
+      // 타임아웃 취소
+      clearTimeout(timeoutId);
+    
+      if (!response.ok) {
+        // 오류 응답 처리 개선
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(`거래내역 동기화 API 호출 실패: ${errorData.error || response.statusText}`);
+        } else {
+          // HTML 또는 다른 형식의 오류 응답 처리
+          const text = await response.text();
+          console.log('API가 JSON이 아닌 응답을 반환했습니다:', text.substring(0, 100));
+          throw new Error(`거래내역 동기화 API 호출 실패: 예상치 못한 응답 형식 (${response.status} ${response.statusText})`);
+        }
+      }
+      
+      // 응답 유형 확인
       const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const errorData = await response.json();
-        throw new Error(`거래내역 동기화 API 호출 실패: ${errorData.error || response.statusText}`);
-      } else {
-        // HTML 또는 다른 형식의 오류 응답 처리
+      if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text();
         console.log('API가 JSON이 아닌 응답을 반환했습니다:', text.substring(0, 100));
-        throw new Error(`거래내역 동기화 API 호출 실패: 예상치 못한 응답 형식 (${response.status} ${response.statusText})`);
+        throw new Error('거래내역 동기화 API가 JSON이 아닌 형식으로 응답했습니다.');
       }
+      
+      const result = await response.json();
+      
+      return NextResponse.json({
+        status: 'success',
+        message: `최근 거래내역 업데이트 완료 (${sinceDate ? sinceDate.toLocaleDateString() : '전체'} 이후)`,
+        emailsProcessed: result.emailsProcessed || 0,
+        count: result.count || 0,
+        nextPageToken: result.nextPageToken || null,
+        sinceDate: sinceDate ? sinceDate.toISOString() : null,
+        forceUpdate: forceUpdate
+      });
+    } catch (error: unknown) {
+      // 타임아웃 취소
+      clearTimeout(timeoutId);
+      
+      console.error('거래내역 API 오류:', error);
+      
+      // AbortError 타임아웃 오류 처리
+      if (error instanceof Error && error.name === 'AbortError') {
+        return NextResponse.json({ 
+          error: '거래내역 동기화 시간 초과 (55초). 클라우드타입 무료티어 타임아웃 제한에 도달했습니다.',
+          transactions: []
+        }, { status: 504 });
+      }
+      
+      return NextResponse.json(
+        { 
+          error: error instanceof Error ? error.message : '거래내역을a 가져오는데 실패했습니다.',
+          transactions: []
+        }, 
+        { status: 500 }
+      );
     }
-    
-    // 응답 유형 확인
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.log('API가 JSON이 아닌 응답을 반환했습니다:', text.substring(0, 100));
-      throw new Error('거래내역 동기화 API가 JSON이 아닌 형식으로 응답했습니다.');
-    }
-    
-    const result = await response.json();
-    
-    return NextResponse.json({
-      status: 'success',
-      message: `최근 거래내역 업데이트 완료 (${sinceDate ? sinceDate.toLocaleDateString() : '전체'} 이후)`,
-      emailsProcessed: result.emailsProcessed || 0,
-      count: result.count || 0,
-      nextPageToken: result.nextPageToken || null,
-      sinceDate: sinceDate ? sinceDate.toISOString() : null,
-      forceUpdate: forceUpdate
-    });
-    
   } catch (error) {
     console.error('거래내역 업데이트 중 오류 발생:', error);
     return NextResponse.json({ 
