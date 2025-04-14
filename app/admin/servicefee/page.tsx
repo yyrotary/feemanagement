@@ -14,7 +14,7 @@ interface ServiceFeeRecord {
   memberId: string;
   memberName: string;
   amount: number;
-  method: 'cash' | 'card' | 'deposit';
+  method: 'cash' | 'card' | '입금대기';
 }
 
 interface ServiceFeeAPIResponse {
@@ -27,7 +27,7 @@ interface ServiceFeeAPIResponse {
 }
 
 const AMOUNTS = [500000, 100000, 50000, 30000, 20000, 10000];
-const METHODS = ['cash', 'card', 'deposit'] as const;
+const METHODS = ['cash', 'card', '입금대기'] as const;
 
 export default function ServiceFeePage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -82,8 +82,8 @@ export default function ServiceFeePage() {
             memberName: fee.memberName || '회원',
             amount: fee.amount || 0,
             method: fee.method && fee.method.length > 0 
-              ? fee.method[0].toLowerCase() as 'cash' | 'card' | 'deposit'
-              : 'deposit'
+              ? fee.method[0].toLowerCase() as 'cash' | 'card' | '입금대기'
+              : '입금대기'
           }));
           setRecords(formattedRecords);
         } else {

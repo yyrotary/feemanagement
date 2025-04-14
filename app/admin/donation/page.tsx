@@ -15,7 +15,7 @@ interface DonationRecord {
   memberId: string;
   memberName: string;
   paid_fee: number;
-  method: 'cash' | 'card' | 'deposit';
+  method: 'cash' | 'card' | '입금대기';
   class: string[];
 }
 
@@ -30,7 +30,7 @@ interface DonationAPIResponse {
 }
 
 const AMOUNTS = [1000000, 500000, 100000, 50000, 30000, 10000];
-const METHODS = ['cash', 'card', 'deposit'] as const;
+const METHODS = ['cash', 'card', '입금대기'] as const;
 const CLASSES = ['PHF', 'EREY', '자선', '재난지원', '봉사인', '장학금'] as const;
 
 export default function DonationPage() {
@@ -99,7 +99,7 @@ export default function DonationPage() {
             memberId: donation.memberId || '',
             memberName: donation.memberName || '회원',
             paid_fee: donation.paid_fee || 0,
-            method: donation.method[0]?.toLowerCase() || 'deposit',
+            method: donation.method[0]?.toLowerCase() || '입금대기',
             class: donation.class || []
           }));
           setRecords(formattedRecords);
@@ -125,12 +125,12 @@ export default function DonationPage() {
     if (donationClass === 'PHF') {
       const amount = exchangeRate * 1000;
       setSelectedAmount(amount);
-      setSelectedMethod('deposit');
+      setSelectedMethod('입금대기');
       setShowMemberSelection(true);
     } else if (donationClass === 'EREY') {
       const amount = exchangeRate * 100;
       setSelectedAmount(amount);
-      setSelectedMethod('deposit');
+      setSelectedMethod('입금대기');
       setShowMemberSelection(true);
     } else {
       setSelectedAmount(null);

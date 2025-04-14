@@ -123,6 +123,11 @@ export interface NotionFeeProperties {
       id: string;
     }>;
   };
+  transactions: {  // 거래내역 관계
+    relation: Array<{
+      id: string;
+    }>;
+  };
   date: {  // 날짜
     date: {
       start: string;
@@ -164,6 +169,11 @@ export interface NotionDonationProperties {
       id: string;
     }>;
   };
+  transactions: {  // 거래내역 관계
+    relation: Array<{
+      id: string;
+    }>;
+  };
   date: {  // 날짜
     date: {
       start: string;
@@ -198,6 +208,11 @@ export interface NotionServiceFeeProperties {
     }>;
   };
   name: {  // 회원 관계
+    relation: Array<{
+      id: string;
+    }>;
+  };
+  transactions: {  // 거래내역 관계
     relation: Array<{
       id: string;
     }>;
@@ -270,6 +285,11 @@ export interface NotionSpecialFeeProperties {
       id: string;
     }>;
   };
+  transactions: {  // 거래내역 관계
+    relation: Array<{
+      id: string;
+    }>;
+  };
   date: {  // 날짜
     date: {
       start: string;
@@ -335,6 +355,27 @@ export interface NotionTransactionProperties {
       id: string;
     }>;
   };
+  donation?: {  // 기부 관계
+    relation: Array<{
+      id: string;
+    }>;
+  };
+  memberfee?: {  // 회비 관계
+    relation: Array<{
+      id: string;
+    }>;
+  };
+  servicefee?: {  // 봉사금 관계
+    relation: Array<{
+      id: string;
+    }>;
+  };
+  specialfee?: {  // 특별회비 관계
+    relation: Array<{
+      id: string;
+    }>;
+  };
+
 }
 
 /**

@@ -1147,6 +1147,15 @@ async function saveTransactionsToNotion(transactions: Array<{
         },
       };
       
+      // 거래내역 생성
+      const response = await notionClient.pages.create({
+        parent: { database_id: TRANSACTIONS_DB_ID },
+        properties: properties,
+      });
+      
+      // 거래내역 ID 추출
+      const transactionId = response.id;
+      
       // 입금인 경우 적요에서 회원 정보 찾기
       if (transaction.in > 0 && transaction.description) {
         // 적요에서 공백 제거하고 소문자로 변환
@@ -1156,7 +1165,7 @@ async function saveTransactionsToNotion(transactions: Array<{
         let foundMemberId: string | null = null;
         
         for (const [key, id] of memberMap.entries()) {
-          // 회원 이름/닉네임이 3글자 이상이고 적요에 포함되어 있는 경우만 매칭
+          // 회원 이름/닉네임이 2글자 이상이고 적요에 포함되어 있는 경우만 매칭
           if (key.length >= 2 && cleanDescription.includes(key)) {
             foundMemberId = id;
             console.log(`거래내역 "${transaction.description}"에서 회원 "${key}" 찾음 (ID: ${id})`);
@@ -1166,10 +1175,15 @@ async function saveTransactionsToNotion(transactions: Array<{
         
         // 회원을 찾은 경우 관계형 필드 설정 및 추가 처리
         if (foundMemberId) {
-          properties.relatedmember = {
-            type: 'relation',
-            relation: [{ id: foundMemberId }]
-          };
+          // 거래내역에 회원 연결
+          await notionClient.pages.update({
+            page_id: transactionId,
+            properties: {
+              relatedmember: {
+                relation: [{ id: foundMemberId }]
+              }
+            }
+          });
           
           // 추가 처리: 입금 내역의 적요에 따라 해당하는 DB에 항목 생성
           const memberName = memberNameMap.get(foundMemberId) || '';
@@ -1178,17 +1192,22 @@ async function saveTransactionsToNotion(transactions: Array<{
             // 1. 회비 처리
             if (cleanDescription.includes('회비')) {
               console.log(`회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
-              await createFeeRecord(foundMemberId, transaction.date, transaction.in);
+              await createFeeRecord(foundMemberId, transaction.date, transaction.in, transactionId);
             }
             // 2. 봉사금 처리
             else if (cleanDescription.includes('봉사')) {
               console.log(`봉사금 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
-              await createServiceFeeRecord(foundMemberId, transaction.date, transaction.in);
+              await createServiceFeeRecord(foundMemberId, transaction.date, transaction.in, transactionId);
             }
             // 3. 특별회비/경조사 처리
             else if (cleanDescription.includes('특별') || cleanDescription.includes('경조')) {
               console.log(`특별회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
-              await createSpecialFeeRecord(foundMemberId, transaction.date, transaction.in);
+              await createSpecialFeeRecord(foundMemberId, transaction.date, transaction.in, transactionId);
+            }
+            // 4. 성금 처리
+            else if (cleanDescription.includes('성금') || cleanDescription.includes('자선') || cleanDescription.includes('재난')) {
+              console.log(`기부 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+              await createDonationRecord(foundMemberId, transaction.date, transaction.in, transactionId);
             }
           } catch (error) {
             console.error(`회원 ${memberName}의 입금 내역 처리 중 오류:`, error);
@@ -1197,11 +1216,7 @@ async function saveTransactionsToNotion(transactions: Array<{
         }
       }
       
-      // 거래내역 생성
-      return notionClient.pages.create({
-        parent: { database_id: TRANSACTIONS_DB_ID },
-        properties: properties,
-      });
+      return transactionId;
     });
     
     await Promise.all(savePromises);
@@ -1214,9 +1229,64 @@ async function saveTransactionsToNotion(transactions: Array<{
 }
 
 // 회비 내역 생성 함수
-async function createFeeRecord(memberId: string, date: string, amount: number) {
+async function createFeeRecord(memberId: string, date: string, amount: number, transactionId?: string) {
   try {
-    await notionClient.pages.create({
+    // 기존에 입금대기 상태인 동일한 금액의 레코드가 있는지 확인
+    const response = await notionClient.databases.query({
+      database_id: DATABASE_IDS.FEES,
+      filter: {
+        and: [
+          {
+            property: "name",
+            relation: {
+              contains: memberId
+            }
+          },
+          {
+            property: "paid_fee",
+            number: {
+              equals: amount
+            }
+          },
+          {
+            property: "method",
+            multi_select: {
+              contains: "입금대기"
+            }
+          }
+        ]
+      }
+    });
+
+    // 입금대기 상태의 레코드가 있으면 상태 업데이트
+    if (response.results.length > 0) {
+      const pageId = response.results[0].id;
+      console.log(`'입금대기' 상태의 회비 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
+      
+      const updateProps: any = {
+        method: {
+          multi_select: [{ name: '입금' }]
+        }
+      };
+      
+      // 거래내역 ID가 있으면 연결
+      if (transactionId) {
+        updateProps.transactions = {
+          relation: [{ id: transactionId }]
+        };
+      }
+      
+      await notionClient.pages.update({
+        page_id: pageId,
+        properties: updateProps
+      });
+      
+      console.log(`회비 내역 업데이트 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
+      return;
+    }
+
+    // 입금대기 상태의 레코드가 없으면 새로 생성
+    const createProps: any = {
       parent: { database_id: DATABASE_IDS.FEES },
       properties: {
         id: {
@@ -1235,7 +1305,16 @@ async function createFeeRecord(memberId: string, date: string, amount: number) {
           multi_select: [{ name: '입금' }]
         }
       }
-    });
+    };
+    
+    // 거래내역 ID가 있으면 연결
+    if (transactionId) {
+      createProps.properties.transactions = {
+        relation: [{ id: transactionId }]
+      };
+    }
+    
+    await notionClient.pages.create(createProps);
     console.log(`회비 내역 생성 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
   } catch (error) {
     console.error('회비 내역 생성 중 오류:', error);
@@ -1244,9 +1323,64 @@ async function createFeeRecord(memberId: string, date: string, amount: number) {
 }
 
 // 봉사금 내역 생성 함수
-async function createServiceFeeRecord(memberId: string, date: string, amount: number) {
+async function createServiceFeeRecord(memberId: string, date: string, amount: number, transactionId?: string) {
   try {
-    await notionClient.pages.create({
+    // 기존에 입금대기 상태인 동일한 금액의 레코드가 있는지 확인
+    const response = await notionClient.databases.query({
+      database_id: DATABASE_IDS.SERVICE_FEES,
+      filter: {
+        and: [
+          {
+            property: "name",
+            relation: {
+              contains: memberId
+            }
+          },
+          {
+            property: "paid_fee",
+            number: {
+              equals: amount
+            }
+          },
+          {
+            property: "method",
+            multi_select: {
+              contains: "입금대기"
+            }
+          }
+        ]
+      }
+    });
+
+    // 입금대기 상태의 레코드가 있으면 상태 업데이트
+    if (response.results.length > 0) {
+      const pageId = response.results[0].id;
+      console.log(`'입금대기' 상태의 봉사금 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
+      
+      const updateProps: any = {
+        method: {
+          multi_select: [{ name: '입금' }]
+        }
+      };
+      
+      // 거래내역 ID가 있으면 연결
+      if (transactionId) {
+        updateProps.transactions = {
+          relation: [{ id: transactionId }]
+        };
+      }
+      
+      await notionClient.pages.update({
+        page_id: pageId,
+        properties: updateProps
+      });
+      
+      console.log(`봉사금 내역 업데이트 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
+      return;
+    }
+
+    // 입금대기 상태의 레코드가 없으면 새로 생성
+    const createProps: any = {
       parent: { database_id: DATABASE_IDS.SERVICE_FEES },
       properties: {
         id: {
@@ -1265,7 +1399,16 @@ async function createServiceFeeRecord(memberId: string, date: string, amount: nu
           multi_select: [{ name: '입금' }]
         }
       }
-    });
+    };
+    
+    // 거래내역 ID가 있으면 연결
+    if (transactionId) {
+      createProps.properties.transactions = {
+        relation: [{ id: transactionId }]
+      };
+    }
+    
+    await notionClient.pages.create(createProps);
     console.log(`봉사금 내역 생성 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
   } catch (error) {
     console.error('봉사금 내역 생성 중 오류:', error);
@@ -1274,9 +1417,64 @@ async function createServiceFeeRecord(memberId: string, date: string, amount: nu
 }
 
 // 특별회비 내역 생성 함수
-async function createSpecialFeeRecord(memberId: string, date: string, amount: number) {
+async function createSpecialFeeRecord(memberId: string, date: string, amount: number, transactionId?: string) {
   try {
-    await notionClient.pages.create({
+    // 기존에 입금대기 상태인 동일한 금액의 레코드가 있는지 확인
+    const response = await notionClient.databases.query({
+      database_id: DATABASE_IDS.SPECIAL_FEES,
+      filter: {
+        and: [
+          {
+            property: "name",
+            relation: {
+              contains: memberId
+            }
+          },
+          {
+            property: "paid_fee",
+            number: {
+              equals: amount
+            }
+          },
+          {
+            property: "method",
+            multi_select: {
+              contains: "입금대기"
+            }
+          }
+        ]
+      }
+    });
+
+    // 입금대기 상태의 레코드가 있으면 상태 업데이트
+    if (response.results.length > 0) {
+      const pageId = response.results[0].id;
+      console.log(`'입금대기' 상태의 특별회비 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
+      
+      const updateProps: any = {
+        method: {
+          multi_select: [{ name: '입금' }]
+        }
+      };
+      
+      // 거래내역 ID가 있으면 연결
+      if (transactionId) {
+        updateProps.transactions = {
+          relation: [{ id: transactionId }]
+        };
+      }
+      
+      await notionClient.pages.update({
+        page_id: pageId,
+        properties: updateProps
+      });
+      
+      console.log(`특별회비 내역 업데이트 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
+      return;
+    }
+
+    // 입금대기 상태의 레코드가 없으면 새로 생성
+    const createProps: any = {
       parent: { database_id: DATABASE_IDS.SPECIAL_FEES },
       properties: {
         이름: {
@@ -1295,10 +1493,112 @@ async function createSpecialFeeRecord(memberId: string, date: string, amount: nu
           multi_select: [{ name: '입금' }]
         }
       }
-    });
+    };
+    
+    // 거래내역 ID가 있으면 연결
+    if (transactionId) {
+      createProps.properties.transactions = {
+        relation: [{ id: transactionId }]
+      };
+    }
+    
+    await notionClient.pages.create(createProps);
     console.log(`특별회비 내역 생성 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
   } catch (error) {
     console.error('특별회비 내역 생성 중 오류:', error);
+    throw error;
+  }
+}
+
+async function createDonationRecord(memberId: string, date: string, amount: number, transactionId?: string) {
+  try {
+    // 기존에 입금대기 상태인 동일한 금액의 레코드가 있는지 확인
+    const response = await notionClient.databases.query({
+      database_id: DATABASE_IDS.DONATIONS,
+      filter: {
+        and: [
+          {
+            property: "name",
+            relation: {
+              contains: memberId
+            }
+          },
+          {
+            property: "paid_fee",
+            number: {
+              equals: amount
+            }
+          },
+          {
+            property: "method",
+            multi_select: {
+              contains: "입금대기"
+            }
+          }
+        ]
+      }
+    });
+
+    // 입금대기 상태의 레코드가 있으면 상태 업데이트
+    if (response.results.length > 0) {
+      const pageId = response.results[0].id;
+      console.log(`'입금대기' 상태의 기부 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
+      
+      const updateProps: any = {
+        method: {
+          multi_select: [{ name: '입금' }]
+        }
+      };
+      
+      // 거래내역 ID가 있으면 연결
+      if (transactionId) {
+        updateProps.transactions = {
+          relation: [{ id: transactionId }]
+        };
+      }
+      
+      await notionClient.pages.update({
+        page_id: pageId,
+        properties: updateProps
+      });
+      
+      console.log(`기부 내역 업데이트 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
+      return;
+    }
+
+    // 입금대기 상태의 레코드가 없으면 새로 생성
+    const createProps: any = {
+      parent: { database_id: DATABASE_IDS.DONATIONS },
+      properties: {
+        이름: {
+          title: [{ text: { content: memberId + `_${new Date().getTime()}` } }]
+        },
+        name: {
+          relation: [{ id: memberId }]
+        },
+        date: {
+          date: { start: date.split('T')[0] } // 시간 부분 제거 
+        },
+        paid_fee: {
+          number: amount
+        },
+        method: {
+          multi_select: [{ name: '입금' }]
+        }
+      }
+    };
+    
+    // 거래내역 ID가 있으면 연결
+    if (transactionId) {
+      createProps.properties.transactions = {
+        relation: [{ id: transactionId }]
+      };
+    }
+    
+    await notionClient.pages.create(createProps);
+    console.log(`기부 내역 생성 완료: 회원 ID ${memberId}, 날짜 ${date.split('T')[0]}, 금액 ${amount}원`);
+  } catch (error) {
+    console.error('기부 내역 생성 중 오류:', error);
     throw error;
   }
 }
