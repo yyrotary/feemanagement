@@ -14,7 +14,7 @@ interface FeeRecord {
   memberId: string;
   memberName: string;
   paid_fee: number;
-  method: 'cash' | 'card' | '입금대기';
+  method: 'cash' | 'card' | 'deposit_pending';
 }
 
 interface SpecialFeeRecord {
@@ -22,7 +22,7 @@ interface SpecialFeeRecord {
   memberId: string;
   memberName: string;
   amount: number;
-  method: 'cash' | 'card' | '입금대기';
+  method: 'cash' | 'card' | 'deposit_pending';
 }
 
 interface FeeAPIResponse {
@@ -44,7 +44,7 @@ interface SpecialFeeAPIResponse {
 }
 
 const AMOUNTS = [720000, 360000, 120000, 60000, 40000, 20000];
-const METHODS = ['cash', 'card', '입금대기'] as const;
+const METHODS = ['cash', 'card', 'deposit_pending'] as const;
 
 export default function FeePage() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -103,8 +103,8 @@ export default function FeePage() {
             memberName: fee.memberName || '회원',
             paid_fee: fee.paid_fee || 0,
             method: fee.method && fee.method.length > 0 
-              ? fee.method[0].toLowerCase() as 'cash' | 'card' | '입금대기'
-              : '입금대기'
+              ? fee.method[0].toLowerCase() as 'cash' | 'card' | 'deposit_pending'
+              : 'deposit_pending'
           }));
           setRecords(formattedRecords);
         } else {
@@ -123,8 +123,8 @@ export default function FeePage() {
             memberName: fee.memberName || '회원',
             amount: fee.amount || 0,
             method: fee.method && fee.method.length > 0 
-              ? fee.method[0].toLowerCase() as 'cash' | 'card' | '입금대기'
-              : '입금대기'
+              ? fee.method[0].toLowerCase() as 'cash' | 'card' | 'deposit_pending'
+              : 'deposit_pending'
           }));
           setSpecialRecords(formattedRecords);
         } else {
@@ -248,6 +248,7 @@ export default function FeePage() {
       cash: 0,
       card: 0,
       deposit: 0,
+      deposit_pending: 0,
       total: 0
     };
 
@@ -429,7 +430,7 @@ export default function FeePage() {
             {records.map((record, index) => (
               <div key={index} className={styles.recordItem}>
                 <span>{record.memberName}: {record.paid_fee.toLocaleString()}원 ({
-                  record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : '입금'
+                  record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : record.method === 'deposit_pending' ? '입금대기' : '입금'
                 })</span>
                 <button 
                   onClick={() => handleDeleteRecord(record)}
@@ -446,6 +447,7 @@ export default function FeePage() {
             <div>현금 합계: {totals.cash.toLocaleString()}원</div>
             <div>카드 합계: {totals.card.toLocaleString()}원</div>
             <div>입금 합계: {totals.deposit.toLocaleString()}원</div>
+            <div>입금대기 합계: {totals.deposit_pending.toLocaleString()}원</div>
             <div className={styles.grandTotal}>총 합계: {totals.total.toLocaleString()}원</div>
           </div>
         </div>
@@ -459,7 +461,7 @@ export default function FeePage() {
             {specialRecords.map((record, index) => (
               <div key={index} className={styles.recordItem}>
                 <span>{record.memberName}: {record.amount.toLocaleString()}원 ({
-                  record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : '입금'
+                  record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : record.method === 'deposit_pending' ? '입금대기' : '입금'
                 })</span>
                 <button 
                   onClick={() => handleDeleteRecord(record)}
@@ -476,6 +478,7 @@ export default function FeePage() {
             <div>현금 합계: {totals.cash.toLocaleString()}원</div>
             <div>카드 합계: {totals.card.toLocaleString()}원</div>
             <div>입금 합계: {totals.deposit.toLocaleString()}원</div>
+            <div>입금대기 합계: {totals.deposit_pending.toLocaleString()}원</div>
             <div className={styles.grandTotal}>총 합계: {totals.total.toLocaleString()}원</div>
           </div>
         </div>

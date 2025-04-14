@@ -1231,7 +1231,7 @@ async function saveTransactionsToNotion(transactions: Array<{
 // 회비 내역 생성 함수
 async function createFeeRecord(memberId: string, date: string, amount: number, transactionId?: string) {
   try {
-    // 기존에 입금대기 상태인 동일한 금액의 레코드가 있는지 확인
+    // 기존에 deposit_pending 상태인 동일한 금액의 레코드가 있는지 확인
     const response = await notionClient.databases.query({
       database_id: DATABASE_IDS.FEES,
       filter: {
@@ -1251,17 +1251,17 @@ async function createFeeRecord(memberId: string, date: string, amount: number, t
           {
             property: "method",
             multi_select: {
-              contains: "입금대기"
+              contains: "deposit_pending"
             }
           }
         ]
       }
     });
 
-    // 입금대기 상태의 레코드가 있으면 상태 업데이트
+    // deposit_pending 상태의 레코드가 있으면 상태 업데이트
     if (response.results.length > 0) {
       const pageId = response.results[0].id;
-      console.log(`'입금대기' 상태의 회비 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
+      console.log(`'deposit_pending' 상태의 회비 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
       
       const updateProps: any = {
         method: {
@@ -1285,7 +1285,7 @@ async function createFeeRecord(memberId: string, date: string, amount: number, t
       return;
     }
 
-    // 입금대기 상태의 레코드가 없으면 새로 생성
+    // deposit_pending 상태의 레코드가 없으면 새로 생성
     const createProps: any = {
       parent: { database_id: DATABASE_IDS.FEES },
       properties: {
@@ -1325,7 +1325,7 @@ async function createFeeRecord(memberId: string, date: string, amount: number, t
 // 봉사금 내역 생성 함수
 async function createServiceFeeRecord(memberId: string, date: string, amount: number, transactionId?: string) {
   try {
-    // 기존에 입금대기 상태인 동일한 금액의 레코드가 있는지 확인
+    // 기존에 deposit_pending 상태인 동일한 금액의 레코드가 있는지 확인
     const response = await notionClient.databases.query({
       database_id: DATABASE_IDS.SERVICE_FEES,
       filter: {
@@ -1345,17 +1345,17 @@ async function createServiceFeeRecord(memberId: string, date: string, amount: nu
           {
             property: "method",
             multi_select: {
-              contains: "입금대기"
+              contains: "deposit_pending"
             }
           }
         ]
       }
     });
 
-    // 입금대기 상태의 레코드가 있으면 상태 업데이트
+    // deposit_pending 상태의 레코드가 있으면 상태 업데이트
     if (response.results.length > 0) {
       const pageId = response.results[0].id;
-      console.log(`'입금대기' 상태의 봉사금 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
+      console.log(`'deposit_pending' 상태의 봉사금 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
       
       const updateProps: any = {
         method: {
@@ -1379,7 +1379,7 @@ async function createServiceFeeRecord(memberId: string, date: string, amount: nu
       return;
     }
 
-    // 입금대기 상태의 레코드가 없으면 새로 생성
+    // deposit_pending 상태의 레코드가 없으면 새로 생성
     const createProps: any = {
       parent: { database_id: DATABASE_IDS.SERVICE_FEES },
       properties: {
@@ -1419,7 +1419,7 @@ async function createServiceFeeRecord(memberId: string, date: string, amount: nu
 // 특별회비 내역 생성 함수
 async function createSpecialFeeRecord(memberId: string, date: string, amount: number, transactionId?: string) {
   try {
-    // 기존에 입금대기 상태인 동일한 금액의 레코드가 있는지 확인
+    // 기존에 deposit_pending 상태인 동일한 금액의 레코드가 있는지 확인
     const response = await notionClient.databases.query({
       database_id: DATABASE_IDS.SPECIAL_FEES,
       filter: {
@@ -1439,17 +1439,17 @@ async function createSpecialFeeRecord(memberId: string, date: string, amount: nu
           {
             property: "method",
             multi_select: {
-              contains: "입금대기"
+              contains: "deposit_pending"
             }
           }
         ]
       }
     });
 
-    // 입금대기 상태의 레코드가 있으면 상태 업데이트
+    // deposit_pending 상태의 레코드가 있으면 상태 업데이트
     if (response.results.length > 0) {
       const pageId = response.results[0].id;
-      console.log(`'입금대기' 상태의 특별회비 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
+      console.log(`'deposit_pending' 상태의 특별회비 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
       
       const updateProps: any = {
         method: {
@@ -1473,7 +1473,7 @@ async function createSpecialFeeRecord(memberId: string, date: string, amount: nu
       return;
     }
 
-    // 입금대기 상태의 레코드가 없으면 새로 생성
+    // deposit_pending 상태의 레코드가 없으면 새로 생성
     const createProps: any = {
       parent: { database_id: DATABASE_IDS.SPECIAL_FEES },
       properties: {
@@ -1512,7 +1512,7 @@ async function createSpecialFeeRecord(memberId: string, date: string, amount: nu
 
 async function createDonationRecord(memberId: string, date: string, amount: number, transactionId?: string) {
   try {
-    // 기존에 입금대기 상태인 동일한 금액의 레코드가 있는지 확인
+    // 기존에 deposit_pending 상태인 동일한 금액의 레코드가 있는지 확인
     const response = await notionClient.databases.query({
       database_id: DATABASE_IDS.DONATIONS,
       filter: {
@@ -1532,17 +1532,17 @@ async function createDonationRecord(memberId: string, date: string, amount: numb
           {
             property: "method",
             multi_select: {
-              contains: "입금대기"
+              contains: "deposit_pending"
             }
           }
         ]
       }
     });
 
-    // 입금대기 상태의 레코드가 있으면 상태 업데이트
+    // deposit_pending 상태의 레코드가 있으면 상태 업데이트
     if (response.results.length > 0) {
       const pageId = response.results[0].id;
-      console.log(`'입금대기' 상태의 기부 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
+      console.log(`'deposit_pending' 상태의 기부 내역 발견 (ID: ${pageId}), '입금'으로 상태 변경`);
       
       const updateProps: any = {
         method: {
@@ -1566,7 +1566,7 @@ async function createDonationRecord(memberId: string, date: string, amount: numb
       return;
     }
 
-    // 입금대기 상태의 레코드가 없으면 새로 생성
+    // deposit_pending 상태의 레코드가 없으면 새로 생성
     const createProps: any = {
       parent: { database_id: DATABASE_IDS.DONATIONS },
       properties: {

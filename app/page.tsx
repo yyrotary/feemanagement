@@ -29,6 +29,19 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [feeType, setFeeType] = useState<'general' | 'special' | 'service' | 'donation'>('general');
 
+    // 납부 방법 변환 함수
+  const formatPaymentMethod = (methods: string[]): string => {
+    if (!methods || methods.length === 0) return '입금';
+    
+    return methods.map(method => {
+      const lowerMethod = method.toLowerCase().trim();
+      if (lowerMethod === 'cash') return '현금';
+      if (lowerMethod === 'card') return '카드';
+      if (lowerMethod === 'deposit') return '입금';
+      if (lowerMethod === 'deposit_pending') return '입금대기';
+      return method;
+    }).join(', ');
+  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -156,7 +169,7 @@ export default function Home() {
                     <tr key={index}>
                       <td>{fee.date}</td>
                       <td>{fee.paid_fee.toLocaleString()}원</td>
-                      <td>{fee.method.join(', ')}</td>
+                      <td>{formatPaymentMethod(fee.method)}</td>
                     </tr>
                   ))}
                 </tbody>

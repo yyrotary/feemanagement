@@ -111,6 +111,7 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
       if (lowerMethod === 'cash') return '현금';
       if (lowerMethod === 'card') return '카드';
       if (lowerMethod === 'deposit') return '입금';
+      if (lowerMethod === 'deposit_pending') return '입금대기';
       return method;
     }).join(', ');
   };
