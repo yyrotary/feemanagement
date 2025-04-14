@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SpecialFee, SpecialFeeCalculation } from '../types/specialFee';
 import styles from './SpecialFeeSection.module.css';
 
-// SpecialEvent 인터페이스 추가
 interface SpecialEvent {
   id: string;
   date: string;
@@ -11,7 +10,7 @@ interface SpecialEvent {
   events: string;
 }
 
-// 금액 포맷 함수 추가
+// 금액 포맷 함수
 const formatNumber = (number: number | undefined): string => {
   if (number === undefined) return '0';
   return number.toLocaleString();
@@ -28,44 +27,13 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
   const [fees, setFees] = useState<SpecialFee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEventsCollapsed, setIsEventsCollapsed] = useState(false);
-  const [eventsLoading, setEventsLoading] = useState(false);
-  const [events, setEvents] = useState<SpecialEvent[]>([]);
-
-  // 경조사 목록을 가져오는 함수
-  const fetchEvents = async () => {
-    if (!memberName || events.length > 0) return;
-    
-    try {
-      setEventsLoading(true);
-      const response = await fetch(`/api/calculateSpecialFee?memberName=${encodeURIComponent(memberName)}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '경조사 목록을 불러오는데 실패했습니다.');
-      }
-
-      const data = await response.json();
-      setEvents(data.events || []);
-      setCalculation(prev => ({
-        ...prev!,
-        events: data.events || [],
-      }));
-    } catch (err) {
-      console.error('Error fetching events:', err);
-      setError(err instanceof Error ? err.message : '경조사 목록을 불러오는데 실패했습니다.');
-    } finally {
-      setEventsLoading(false);
-    }
-  };
+  const [isEventsCollapsed, setIsEventsCollapsed] = useState(true);
+  const [isEventsFetched, setIsEventsFetched] = useState(false);
 
   // 경조사 목록 토글 핸들러
-  const handleEventsToggle = () => {
-    if (isEventsCollapsed && !events.length) {
-      fetchEvents();
-    }
+  const handleEventsToggle = useCallback(() => {
     setIsEventsCollapsed(!isEventsCollapsed);
-  };
+  }, [isEventsCollapsed]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -79,7 +47,7 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
         setLoading(true);
         setError(null);
 
-        // 특별회비 총액과 납부 내역만 먼저 가져옴
+        // 한 번에 모든 데이터 요청 (경조사 목록 포함)
         const [calcResponse, feesResponse] = await Promise.all([
           fetch(`/api/calculateSpecialFee?memberName=${encodeURIComponent(memberName)}`),
           fetch(`/api/getSpecialFees?memberId=${encodeURIComponent(memberId)}`)
@@ -94,16 +62,14 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
           feesResponse.json()
         ]);
 
-        // 경조사 목록을 제외한 데이터만 설정
+        // 모든 데이터를 한 번에 설정
         setCalculation({
-          events: [],
+          events: calcData.events || [],
           totalFee: calcData.totalFee,
           specialEventFee: calcData.specialEventFee
         });
         setFees(feesData.fees || []);
-
-        // 컴포넌트 로드 시 경조사 목록 바로 가져오기
-        fetchEvents();
+        setIsEventsFetched(true);
       } catch (err) {
         console.error('Error fetching special fee data:', err);
         setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
@@ -115,29 +81,31 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
     };
 
     fetchData();
+    
+    // 이 부분이 중요! 의존성 배열에 memberName과 memberId만 포함
   }, [memberId, memberName]);
 
   if (loading) {
-    return <div className={styles.loading}>로딩 중...</div>;
+    return <div>로딩 중...</div>;
   }
 
   if (error) {
-    return <div className={styles.error}>{error}</div>;
+    return <div>{error}</div>;
   }
 
   if (!calculation) {
-    return <div className={styles.error}>데이터를 불러올 수 없습니다.</div>;
+    return <div>데이터를 불러올 수 없습니다.</div>;
   }
 
   // 납부 금액 계산
   const totalPaid = fees.reduce((sum, fee) => sum + (fee.amount || 0), 0);
   const remainingFee = calculation.totalFee - totalPaid;
-  const eventCount = events.length || calculation.events?.length || 0;
+  const events = calculation.events || [];
+  const eventCount = events.length;
 
   // 납부 방법 변환 함수
   const formatPaymentMethod = (methods: string[] | undefined): string => {
     if (!methods || methods.length === 0) return '입금';
-    
     return methods.map(method => {
       const lowerMethod = method.toLowerCase().trim();
       if (lowerMethod === 'cash') return '현금';
@@ -159,9 +127,7 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
           경조사 목록 {isEventsCollapsed ? '▼' : '▲'}
         </h3>
         <div className={`${styles.eventsList} ${isEventsCollapsed ? styles.collapsed : ''}`}>
-          {eventsLoading ? (
-            <div className={styles.loading}>경조사 목록 로딩 중...</div>
-          ) : events.length > 0 ? (
+          {events.length > 0 ? (
             <ul className={styles.list}>
               {events.map((event) => (
                 <li key={event.id} className={styles.eventItem}>
@@ -184,7 +150,7 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
         <h3>특별회비 총액</h3>
         <p>
           {formatNumber(calculation.totalFee)}원
-          <span className={styles.eventCount}>({eventCount}건 x 20,000원)</span>
+          <span className={styles.eventCount}>({eventCount}건 x {formatNumber(calculation.specialEventFee)}원)</span>
         </p>
       </div>
 
