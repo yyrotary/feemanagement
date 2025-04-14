@@ -12,8 +12,8 @@ interface SchedulerConfig {
 }
 
 let schedulerConfig: SchedulerConfig = {
-  dailyIntervalMinutes: 480, // 기본값: 8시간 (480분)
-  weeklyIntervalDays: 7     // 기본값: 7일
+  dailyIntervalMinutes: 5, // 기본값: 5분
+  weeklyIntervalDays: 2     // 기본값: 2일
 };
 
 // 스케줄러 설정 저장

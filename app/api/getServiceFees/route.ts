@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { notionClient, DATABASE_IDS } from '@/lib/notion';
-import { 
-  PageObjectResponse, 
-  QueryDatabaseParameters 
-} from '@notionhq/client/build/src/api-endpoints';
+import { PageObjectResponse, QueryDatabaseParameters } from '@notionhq/client/build/src/api-endpoints';
+import NodeCache from 'node-cache';
+
+// 메모리 캐시 설정 (TTL: 10분)
+const cache = new NodeCache({ stdTTL: 600 });
 
 interface NotionFeeProperties {
   name: {
@@ -44,9 +45,16 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get('memberId');
     const date = searchParams.get('date');
-
-    console.log('Request params:', { memberId, date });
-
+    
+    // 캐시 키 생성
+    const cacheKey = `service_fees_${memberId || ''}${date || ''}`;
+    
+    // 캐시 확인
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      return NextResponse.json({ fees: cachedData });
+    }
+    
     // 필터와 쿼리 옵션 초기화
     let filter: QueryDatabaseParameters['filter'] = undefined;
     const queryOptions: QueryDatabaseParameters = {
@@ -58,7 +66,7 @@ export async function GET(request: Request) {
         }
       ]
     };
-
+    
     // 필터 설정
     if (memberId && date) {
       // memberId와 date 모두 있는 경우
@@ -95,59 +103,71 @@ export async function GET(request: Request) {
         }
       };
     }
-
+    
     if (filter) {
       queryOptions.filter = filter;
     }
-
+    
     // 봉사금 데이터 조회
     const response = await notionClient.databases.query(queryOptions);
-    console.log('Fee records count:', response.results.length);
-
-    // 모든 회원 정보를 한 번에 가져오기
-    const membersResponse = await notionClient.databases.query({
-      database_id: DATABASE_IDS.MEMBERS,
-      page_size: 100 // 최대 100명의 회원 정보 가져오기
-    });
-    console.log('Total members loaded:', membersResponse.results.length);
-
-    // 회원 ID별 매핑 생성
-    const memberMap: Record<string, { name: string, nickname: string }> = {};
-    membersResponse.results.forEach(member => {
-      const memberObj = member as PageObjectResponse;
-      const properties = memberObj.properties as unknown as NotionMemberProperties;
+    
+    // 관련된 회원 ID 추출 (배치 처리를 위해)
+    const memberIds = new Set<string>();
+    
+    response.results.forEach(page => {
+      const pageObj = page as PageObjectResponse;
+      const properties = pageObj.properties as unknown as NotionFeeProperties;
+      const memberRelations = properties.name?.relation || [];
       
-      try {
-        const name = properties.Name?.title[0]?.plain_text || '회원';
-        const nickname = properties.nick?.rich_text[0]?.plain_text || '';
-        memberMap[memberObj.id] = { name, nickname };
-      } catch (error) {
-        console.error(`Error parsing member ${memberObj.id}:`, error);
-        memberMap[memberObj.id] = { name: '회원', nickname: '' };
+      if (memberRelations.length > 0) {
+        memberIds.add(memberRelations[0].id);
       }
     });
-
+    
+    // 회원 정보 매핑 생성 (필요한 회원만 조회)
+    const memberMap: Record<string, { name: string, nickname: string }> = {};
+    
+    if (memberIds.size > 0) {
+      // 배치로 회원 정보 조회
+      const memberDataPromises = Array.from(memberIds).map(id => 
+        notionClient.pages.retrieve({ page_id: id })
+      );
+      
+      const memberResults = await Promise.all(memberDataPromises);
+      
+      memberResults.forEach(member => {
+        const memberObj = member as PageObjectResponse;
+        const properties = memberObj.properties as unknown as NotionMemberProperties;
+        
+        try {
+          const name = properties.Name?.title?.[0]?.plain_text || '회원';
+          const nickname = properties.nick?.rich_text?.[0]?.plain_text || '';
+          memberMap[memberObj.id] = { name, nickname };
+        } catch (error) {
+          memberMap[memberObj.id] = { name: '회원', nickname: '' };
+        }
+      });
+    }
+    
     // 봉사금 데이터에 회원 이름 매핑
     const fees = response.results.map(page => {
       const pageObj = page as PageObjectResponse;
       const properties = pageObj.properties as unknown as NotionFeeProperties;
-      
       const memberRelations = properties.name?.relation || [];
+      
       let memberName = '회원';
       let memberId = '';
       
       if (memberRelations.length > 0) {
         memberId = memberRelations[0].id;
         const memberInfo = memberMap[memberId];
-        
         if (memberInfo) {
           memberName = memberInfo.name;
         }
       }
-
+      
       const methods = properties.method?.multi_select?.map(m => m.name) || ['cash'];
-      console.log('Service Fee methods from Notion:', methods);
-
+      
       return {
         id: pageObj.id,
         memberId,
@@ -157,11 +177,14 @@ export async function GET(request: Request) {
         method: methods,
       };
     });
-
+    
+    // 결과를 캐시에 저장
+    cache.set(cacheKey, fees);
+    
     return NextResponse.json({ fees });
   } catch (error) {
     console.error('Error fetching service fees:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: '봉사금 내역을 가져오는데 실패했습니다.',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });

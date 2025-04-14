@@ -32,8 +32,8 @@ export default function SettingsPage() {
   const [schedulerError, setSchedulerError] = useState<string | null>(null);
   const [schedulerSuccess, setSchedulerSuccess] = useState<string | null>(null);
   const [schedulerConfig, setSchedulerConfig] = useState({
-    dailyIntervalMinutes: 480, // 기본값: 8시간 (480분)
-    weeklyIntervalDays: 7      // 기본값: 7일
+    dailyIntervalMinutes: 5, // 기본값: 5분분
+    weeklyIntervalDays: 2      // 기본값: 2일
   });
 
   useEffect(() => {
