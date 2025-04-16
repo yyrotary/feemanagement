@@ -57,6 +57,7 @@ export default function FeePage() {
   const [selectedMethod, setSelectedMethod] = useState<typeof METHODS[number] | null>(null);
   const [showMemberSelection, setShowMemberSelection] = useState(false);
   const [feeType, setFeeType] = useState<'general' | 'special'>('general');
+  const [sortOption, setSortOption] = useState<'time' | 'name' | 'amount'>('time');
 
   useEffect(() => {
     const cachedMembers = sessionStorage.getItem('members');
@@ -285,6 +286,36 @@ export default function FeePage() {
     setFeeType(type);
   };
 
+  // 정렬된 레코드 계산
+  const getSortedRecords = () => {
+    const recordsToSort = feeType === 'general' 
+      ? [...records] 
+      : [...specialRecords];
+    
+    switch (sortOption) {
+      case 'name':
+        return recordsToSort.sort((a, b) => a.memberName.localeCompare(b.memberName));
+      case 'amount':
+        if (feeType === 'general') {
+          return recordsToSort.sort((a, b) => (b as FeeRecord).paid_fee - (a as FeeRecord).paid_fee);
+        } else {
+          return recordsToSort.sort((a, b) => (b as SpecialFeeRecord).amount - (a as SpecialFeeRecord).amount);
+        }
+      case 'time':
+      default:
+        return recordsToSort; // 이미 시간순으로 정렬되어 있음
+    }
+  };
+
+  // 정렬된 기록 및 2열 배열로 변환
+  const sortedRecords = getSortedRecords();
+  const recordColumns = [[], []] as any[][];
+  
+  sortedRecords.forEach((record, index) => {
+    const columnIndex = index % 2;
+    recordColumns[columnIndex].push(record);
+  });
+
   if (loading) return <div className={styles.container}>회원 목록을 불러오는 중...</div>;
 
   // 회원 이름을 3열로 정렬하기 위해 배열 재구성
@@ -426,18 +457,47 @@ export default function FeePage() {
       {feeType === 'general' && records.length > 0 && (
         <div className={styles.summary}>
           <h2>기록된 연회비</h2>
-          <div className={styles.recordsList}>
-            {records.map((record, index) => (
-              <div key={index} className={styles.recordItem}>
-                <span>{record.memberName}: {record.paid_fee.toLocaleString()}원 ({
-                  record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : record.method === 'deposit_pending' ? '입금대기' : '입금'
-                })</span>
-                <button 
-                  onClick={() => handleDeleteRecord(record)}
-                  className={styles.deleteButton}
-                >
-                  삭제
-                </button>
+          
+          {/* 정렬 옵션 선택 */}
+          <div className={styles.sortOptions}>
+            <span>정렬: </span>
+            <button 
+              className={`${styles.sortButton} ${sortOption === 'time' ? styles.selected : ''}`}
+              onClick={() => setSortOption('time')}
+            >
+              기록순
+            </button>
+            <button 
+              className={`${styles.sortButton} ${sortOption === 'name' ? styles.selected : ''}`}
+              onClick={() => setSortOption('name')}
+            >
+              이름순
+            </button>
+            <button 
+              className={`${styles.sortButton} ${sortOption === 'amount' ? styles.selected : ''}`}
+              onClick={() => setSortOption('amount')}
+            >
+              금액순
+            </button>
+          </div>
+          
+          {/* 기부 내역 2열 표시 */}
+          <div className={styles.recordsGrid}>
+            {recordColumns.map((column, columnIndex) => (
+              <div key={columnIndex} className={styles.recordsColumn}>
+                {column.map((record, index) => (
+                  <div key={index} className={`${styles.recordItem} ${styles.compact}`}>
+                    <span>{record.memberName}: {record.paid_fee.toLocaleString()}원 ({
+                      record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : record.method === 'deposit_pending' ? '입금대기' : '입금'
+                    })</span>
+                    <button 
+                      onClick={() => handleDeleteRecord(record)}
+                      className={styles.deleteButton}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -457,18 +517,47 @@ export default function FeePage() {
       {feeType === 'special' && specialRecords.length > 0 && (
         <div className={styles.summary}>
           <h2>기록된 특별회비</h2>
-          <div className={styles.recordsList}>
-            {specialRecords.map((record, index) => (
-              <div key={index} className={styles.recordItem}>
-                <span>{record.memberName}: {record.amount.toLocaleString()}원 ({
-                  record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : record.method === 'deposit_pending' ? '입금대기' : '입금'
-                })</span>
-                <button 
-                  onClick={() => handleDeleteRecord(record)}
-                  className={styles.deleteButton}
-                >
-                  삭제
-                </button>
+          
+          {/* 정렬 옵션 선택 */}
+          <div className={styles.sortOptions}>
+            <span>정렬: </span>
+            <button 
+              className={`${styles.sortButton} ${sortOption === 'time' ? styles.selected : ''}`}
+              onClick={() => setSortOption('time')}
+            >
+              기록순
+            </button>
+            <button 
+              className={`${styles.sortButton} ${sortOption === 'name' ? styles.selected : ''}`}
+              onClick={() => setSortOption('name')}
+            >
+              이름순
+            </button>
+            <button 
+              className={`${styles.sortButton} ${sortOption === 'amount' ? styles.selected : ''}`}
+              onClick={() => setSortOption('amount')}
+            >
+              금액순
+            </button>
+          </div>
+          
+          {/* 특별회비 내역 2열 표시 */}
+          <div className={styles.recordsGrid}>
+            {recordColumns.map((column, columnIndex) => (
+              <div key={columnIndex} className={styles.recordsColumn}>
+                {column.map((record, index) => (
+                  <div key={index} className={`${styles.recordItem} ${styles.compact}`}>
+                    <span>{record.memberName}: {record.amount.toLocaleString()}원 ({
+                      record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : record.method === 'deposit_pending' ? '입금대기' : '입금'
+                    })</span>
+                    <button 
+                      onClick={() => handleDeleteRecord(record)}
+                      className={styles.deleteButton}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
