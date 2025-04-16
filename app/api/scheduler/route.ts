@@ -45,7 +45,7 @@ function loadConfig() {
 loadConfig();
 
 // 거래내역 업데이트 함수
-async function updateTransactions(forceUpdate: boolean = false) {
+async function supdateTransactions(forceUpdate: boolean = false) {
   try {
     const now = new Date();
     console.log(`[${now.toISOString()}] 거래내역 업데이트 작업 실행 중...`);
@@ -106,7 +106,7 @@ function startScheduler() {
   const dailyIntervalMs = schedulerConfig.dailyIntervalMinutes * 60 * 1000;
   schedulerIntervals.push(
     setInterval(() => {
-      updateTransactions(false);
+      supdateTransactions(false);
     }, dailyIntervalMs)
   );
   
@@ -114,12 +114,12 @@ function startScheduler() {
   const weeklyIntervalMs = schedulerConfig.weeklyIntervalDays * 24 * 60 * 60 * 1000;
   schedulerIntervals.push(
     setInterval(() => {
-      updateTransactions(true);
+      supdateTransactions(true);
     }, weeklyIntervalMs)
   );
   
   // 서버 시작 시 초기 실행
-  updateTransactions(false);
+  supdateTransactions(false);
   
   schedulerStarted = true;
 }
@@ -214,7 +214,7 @@ export async function POST(request: Request) {
         
       case 'execute':
         // 즉시 실행
-        const result = await updateTransactions(forceUpdate);
+        const result = await supdateTransactions(forceUpdate);
         return NextResponse.json({
           status: 'success',
           message: '거래내역 업데이트가 실행되었습니다.',

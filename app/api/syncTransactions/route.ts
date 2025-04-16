@@ -571,7 +571,7 @@ async function getTransactionEmails(
   batchSize: number = 500  // 기본값 증가
 ) {
   // 검색 쿼리 구성
-  let query = 'from:nonghyupcorp.com OR from:webmaster@ums.nonghyup.com OR subject:"입출금" OR subject:"거래내역" OR subject:"계좌" OR subject:"농협"';
+  let query = 'from:nonghyup.com OR from:webmaster@ums.nonghyup.com OR subject:"입출금" OR subject:"거래 내역" OR subject:"거래내역" OR subject:"계좌" OR subject:"농협"';
   
   // 날짜 범위 추가
   if (olderThanDate) {
@@ -1188,31 +1188,40 @@ async function saveTransactionsToNotion(transactions: Array<{
           // 추가 처리: 입금 내역의 적요에 따라 해당하는 DB에 항목 생성
           const memberName = memberNameMap.get(foundMemberId) || '';
           
-          try {
-            // 1. 회비 처리
-            if (cleanDescription.includes('회비')) {
-              console.log(`회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
-              await createFeeRecord(foundMemberId, transaction.date, transaction.in, transactionId);
-            }
-            // 2. 봉사금 처리
-            else if (cleanDescription.includes('봉사')) {
-              console.log(`봉사금 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
-              await createServiceFeeRecord(foundMemberId, transaction.date, transaction.in, transactionId);
-            }
-            // 3. 특별회비/경조사 처리
-            else if (cleanDescription.includes('특별') || cleanDescription.includes('경조')) {
-              console.log(`특별회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
-              await createSpecialFeeRecord(foundMemberId, transaction.date, transaction.in, transactionId);
-            }
-            // 4. 성금 처리
-            else if (cleanDescription.includes('성금') || cleanDescription.includes('자선') || cleanDescription.includes('재난')) {
-              console.log(`기부 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
-              await createDonationRecord(foundMemberId, transaction.date, transaction.in, transactionId);
-            }
-          } catch (error) {
-            console.error(`회원 ${memberName}의 입금 내역 처리 중 오류:`, error);
-            // 계속 진행 (메인 거래내역은 저장)
+          
+          // 1. 회비 처리
+          if (cleanDescription.includes('회비')) {
+            console.log(`회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+            await createFeeRecord(foundMemberId, transaction.date, transaction.in, transactionId);
           }
+          // 2. 봉사금 처리
+          else if (cleanDescription.includes('봉사')) {
+            console.log(`봉사금 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+            await createServiceFeeRecord(foundMemberId, transaction.date, transaction.in, transactionId);
+          }
+          // 3. 특별회비/경조사 처리
+          else if (cleanDescription.includes('특별') || cleanDescription.includes('경조')) {
+            console.log(`특별회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+            await createSpecialFeeRecord(foundMemberId, transaction.date, transaction.in, transactionId);
+          }
+          // 4. 성금 처리
+          else if (cleanDescription.includes('성금') || cleanDescription.includes('자선') || cleanDescription.includes('재난')) {
+            console.log(`기부 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+            await createDonationRecord(foundMemberId, transaction.date, transaction.in, transactionId);
+          }
+          // 5. 미지정 입금 처리 - 각 DB에서 입금대기 상태인 레코드를 찾아 처리
+          else {
+            // 적요에 특정 키워드가 없는 모든 입금은 미지정 입금으로 처리
+            console.log(`미지정 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+            const processed = await createUnspecifiedRecord(foundMemberId, transaction.date, transaction.in, transactionId);
+            
+            // 미처리된 경우 기본적으로 회비로 처리 (선택적)
+            if (!processed) {
+              console.log(`미지정 입금 처리 실패: 회원 ${memberName}, 금액: ${transaction.in}원`);
+              //await createFeeRecord(foundMemberId, transaction.date, transaction.in, transactionId);
+            }
+          }
+          
         }
       }
       
@@ -1265,7 +1274,7 @@ async function createFeeRecord(memberId: string, date: string, amount: number, t
       
       const updateProps: any = {
         method: {
-          multi_select: [{ name: '입금' }]
+          multi_select: [{ name: 'deposit' }]
         }
       };
       
@@ -1290,7 +1299,7 @@ async function createFeeRecord(memberId: string, date: string, amount: number, t
       parent: { database_id: DATABASE_IDS.FEES },
       properties: {
         id: {
-          title: [{ text: { content: `회비_${new Date().getTime()}` } }]
+          title: [{ text: { content: memberId + `_${new Date().getTime()}` } }]
         },
         name: {
           relation: [{ id: memberId }]
@@ -1302,7 +1311,7 @@ async function createFeeRecord(memberId: string, date: string, amount: number, t
           number: amount
         },
         method: {
-          multi_select: [{ name: '입금' }]
+          multi_select: [{ name: 'deposit' }]
         }
       }
     };
@@ -1384,7 +1393,7 @@ async function createServiceFeeRecord(memberId: string, date: string, amount: nu
       parent: { database_id: DATABASE_IDS.SERVICE_FEES },
       properties: {
         id: {
-          title: [{ text: { content: `봉사금_${new Date().getTime()}` } }]
+          title: [{ text: { content: memberId + `_${new Date().getTime()}` } }]
         },
         name: {
           relation: [{ id: memberId }]
@@ -1396,7 +1405,7 @@ async function createServiceFeeRecord(memberId: string, date: string, amount: nu
           number: amount
         },
         method: {
-          multi_select: [{ name: '입금' }]
+          multi_select: [{ name: 'deposit' }]
         }
       }
     };
@@ -1453,7 +1462,7 @@ async function createSpecialFeeRecord(memberId: string, date: string, amount: nu
       
       const updateProps: any = {
         method: {
-          multi_select: [{ name: '입금' }]
+          multi_select: [{ name: 'deposit' }]
         }
       };
       
@@ -1478,7 +1487,7 @@ async function createSpecialFeeRecord(memberId: string, date: string, amount: nu
       parent: { database_id: DATABASE_IDS.SPECIAL_FEES },
       properties: {
         이름: {
-          title: [{ text: { content: `특별회비_${new Date().getTime()}` } }]
+          title: [{ text: { content: memberId + `_${new Date().getTime()}` } }]
         },
         name: {
           relation: [{ id: memberId }]
@@ -1490,7 +1499,7 @@ async function createSpecialFeeRecord(memberId: string, date: string, amount: nu
           number: amount
         },
         method: {
-          multi_select: [{ name: '입금' }]
+          multi_select: [{ name: 'deposit' }]
         }
       }
     };
@@ -1546,7 +1555,7 @@ async function createDonationRecord(memberId: string, date: string, amount: numb
       
       const updateProps: any = {
         method: {
-          multi_select: [{ name: '입금' }]
+          multi_select: [{ name: 'deposit' }]
         }
       };
       
@@ -1583,7 +1592,7 @@ async function createDonationRecord(memberId: string, date: string, amount: numb
           number: amount
         },
         method: {
-          multi_select: [{ name: '입금' }]
+          multi_select: [{ name: 'deposit' }]
         }
       }
     };
@@ -1600,6 +1609,242 @@ async function createDonationRecord(memberId: string, date: string, amount: numb
   } catch (error) {
     console.error('기부 내역 생성 중 오류:', error);
     throw error;
+  }
+}
+
+async function createUnspecifiedRecord(memberId: string, date: string, amount: number, transactionId?: string) {
+  try {
+    console.log(`미지정 입금 처리 시작: 회원 ID ${memberId}, 금액 ${amount}원`);
+    
+    // 회원의 모든 '입금대기' 상태인 레코드 조회
+    const pendingRecords = {
+      fees: [] as any[],
+      serviceFees: [] as any[],
+      specialFees: [] as any[],
+      donations: [] as any[]
+    };
+    
+    // 1. 회비 DB 조회
+    const feesResponse = await notionClient.databases.query({
+      database_id: DATABASE_IDS.FEES,
+      filter: {
+        and: [
+          {
+            property: "name",
+            relation: {
+              contains: memberId
+            }
+          },
+          {
+            property: "method",
+            multi_select: {
+              contains: "deposit_pending"
+            }
+          }
+        ]
+      }
+    });
+    pendingRecords.fees = feesResponse.results;
+    
+    // 2. 봉사금 DB 조회
+    const serviceFeesResponse = await notionClient.databases.query({
+      database_id: DATABASE_IDS.SERVICE_FEES,
+      filter: {
+        and: [
+          {
+            property: "name",
+            relation: {
+              contains: memberId
+            }
+          },
+          {
+            property: "method",
+            multi_select: {
+              contains: "deposit_pending"
+            }
+          }
+        ]
+      }
+    });
+    pendingRecords.serviceFees = serviceFeesResponse.results;
+    
+    // 3. 특별회비 DB 조회
+    const specialFeesResponse = await notionClient.databases.query({
+      database_id: DATABASE_IDS.SPECIAL_FEES,
+      filter: {
+        and: [
+          {
+            property: "name",
+            relation: {
+              contains: memberId
+            }
+          },
+          {
+            property: "method",
+            multi_select: {
+              contains: "deposit_pending"
+            }
+          }
+        ]
+      }
+    });
+    pendingRecords.specialFees = specialFeesResponse.results;
+    
+    // 4. 기부금 DB 조회
+    const donationsResponse = await notionClient.databases.query({
+      database_id: DATABASE_IDS.DONATIONS,
+      filter: {
+        and: [
+          {
+            property: "name",
+            relation: {
+              contains: memberId
+            }
+          },
+          {
+            property: "method",
+            multi_select: {
+              contains: "deposit_pending"
+            }
+          }
+        ]
+      }
+    });
+    pendingRecords.donations = donationsResponse.results;
+    
+    // 모든 입금대기 레코드 중 금액이 정확히 일치하는 조합 찾기
+    const allPendingRecords = [
+      ...pendingRecords.fees.map(record => ({ 
+        type: 'fee', 
+        id: record.id, 
+        amount: record.properties.paid_fee.number 
+      })),
+      ...pendingRecords.serviceFees.map(record => ({ 
+        type: 'serviceFee', 
+        id: record.id, 
+        amount: record.properties.paid_fee.number 
+      })),
+      ...pendingRecords.specialFees.map(record => ({ 
+        type: 'specialFee', 
+        id: record.id, 
+        amount: record.properties.paid_fee.number 
+      })),
+      ...pendingRecords.donations.map(record => ({ 
+        type: 'donation', 
+        id: record.id, 
+        amount: record.properties.paid_fee.number 
+      }))
+    ];
+    
+    console.log(`총 ${allPendingRecords.length}개의 입금대기 레코드 발견 (회비: ${pendingRecords.fees.length}, 봉사금: ${pendingRecords.serviceFees.length}, 특별회비: ${pendingRecords.specialFees.length}, 기부금: ${pendingRecords.donations.length})`);
+    
+    // 입금 금액과 일치하는 단일 레코드 찾기
+    const singleMatch = allPendingRecords.find(record => record.amount === amount);
+    if (singleMatch) {
+      console.log(`단일 ${singleMatch.type} 레코드 발견: ${singleMatch.id}, 금액: ${singleMatch.amount}원`);
+      await updatePendingRecord(singleMatch.type, singleMatch.id, date, transactionId);
+      return true;
+    }
+    
+    // 조합으로 금액이 정확히 일치하는 경우 찾기
+    // 최대 3개까지 조합 시도 (성능상의 이유)
+    let matchFound = false;
+    
+    // 2개 조합 찾기
+    for (let i = 0; i < allPendingRecords.length; i++) {
+      for (let j = i + 1; j < allPendingRecords.length; j++) {
+        const sum = allPendingRecords[i].amount + allPendingRecords[j].amount;
+        if (sum === amount) {
+          console.log(`2개 레코드 조합 발견: ${allPendingRecords[i].type}(${allPendingRecords[i].id}) + ${allPendingRecords[j].type}(${allPendingRecords[j].id}), 합계: ${sum}원`);
+          await updatePendingRecord(allPendingRecords[i].type, allPendingRecords[i].id, date, transactionId);
+          await updatePendingRecord(allPendingRecords[j].type, allPendingRecords[j].id, date, transactionId);
+          matchFound = true;
+          break;
+        }
+      }
+      if (matchFound) break;
+    }
+    
+    // 3개 조합 찾기 (이전 조합에서 찾지 못한 경우)
+    if (!matchFound && allPendingRecords.length >= 3) {
+      for (let i = 0; i < allPendingRecords.length; i++) {
+        for (let j = i + 1; j < allPendingRecords.length; j++) {
+          for (let k = j + 1; k < allPendingRecords.length; k++) {
+            const sum = allPendingRecords[i].amount + allPendingRecords[j].amount + allPendingRecords[k].amount;
+            if (sum === amount) {
+              console.log(`3개 레코드 조합 발견: ${allPendingRecords[i].type}(${allPendingRecords[i].id}) + ${allPendingRecords[j].type}(${allPendingRecords[j].id}) + ${allPendingRecords[k].type}(${allPendingRecords[k].id}), 합계: ${sum}원`);
+              await updatePendingRecord(allPendingRecords[i].type, allPendingRecords[i].id, date, transactionId);
+              await updatePendingRecord(allPendingRecords[j].type, allPendingRecords[j].id, date, transactionId);
+              await updatePendingRecord(allPendingRecords[k].type, allPendingRecords[k].id, date, transactionId);
+              matchFound = true;
+              break;
+            }
+          }
+          if (matchFound) break;
+        }
+        if (matchFound) break;
+      }
+    }
+    
+    // 레코드 업데이트 실패 시 미정 입금으로 처리
+    if (!matchFound) {
+      console.log(`일치하는 입금대기 레코드 조합을 찾을 수 없습니다. 미정 입금으로 처리합니다.`);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('미지정 입금 처리 중 오류:', error);
+    return false;
+  }
+}
+
+// 입금대기 레코드 업데이트 함수
+async function updatePendingRecord(type: string, recordId: string, date: string, transactionId?: string) {
+  try {
+    const updateProps: any = {
+      method: {
+        multi_select: [{ name: 'deposit' }]
+      }
+    };
+    
+    // 거래내역 ID가 있으면 연결
+    if (transactionId) {
+      updateProps.transactions = {
+        relation: [{ id: transactionId }]
+      };
+    }
+    
+    // 레코드 타입에 따라 적절한 DB ID 선택
+    let databaseId;
+    switch (type) {
+      case 'fee':
+        databaseId = DATABASE_IDS.FEES;
+        break;
+      case 'serviceFee':
+        databaseId = DATABASE_IDS.SERVICE_FEES;
+        break;
+      case 'specialFee':
+        databaseId = DATABASE_IDS.SPECIAL_FEES;
+        break;
+      case 'donation':
+        databaseId = DATABASE_IDS.DONATIONS;
+        break;
+      default:
+        throw new Error(`알 수 없는 레코드 타입: ${type}`);
+    }
+    
+    // 레코드 업데이트
+    await notionClient.pages.update({
+      page_id: recordId,
+      properties: updateProps
+    });
+    
+    console.log(`${type} 레코드(ID: ${recordId}) 업데이트 완료: 입금대기 -> 입금`);
+    return true;
+  } catch (error) {
+    console.error(`${type} 레코드(ID: ${recordId}) 업데이트 중 오류:`, error);
+    return false;
   }
 }
 
