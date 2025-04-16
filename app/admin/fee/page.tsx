@@ -43,6 +43,8 @@ interface SpecialFeeAPIResponse {
   memberName?: string;
 }
 
+type SortOption = 'time' | 'name' | 'amount';
+
 const AMOUNTS = [720000, 360000, 120000, 60000, 40000, 20000];
 const METHODS = ['cash', 'card', 'deposit_pending'] as const;
 
@@ -57,7 +59,7 @@ export default function FeePage() {
   const [selectedMethod, setSelectedMethod] = useState<typeof METHODS[number] | null>(null);
   const [showMemberSelection, setShowMemberSelection] = useState(false);
   const [feeType, setFeeType] = useState<'general' | 'special'>('general');
-  const [sortOption, setSortOption] = useState<'time' | 'name' | 'amount'>('time');
+  const [sortOption, setSortOption] = useState<SortOption>('time');
 
   useEffect(() => {
     const cachedMembers = sessionStorage.getItem('members');
@@ -288,9 +290,7 @@ export default function FeePage() {
 
   // 정렬된 레코드 계산
   const getSortedRecords = () => {
-    const recordsToSort = feeType === 'general' 
-      ? [...records] 
-      : [...specialRecords];
+    const recordsToSort = feeType === 'general' ? [...records] : [...specialRecords];
     
     switch (sortOption) {
       case 'name':

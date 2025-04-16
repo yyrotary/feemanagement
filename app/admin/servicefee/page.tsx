@@ -26,6 +26,8 @@ interface ServiceFeeAPIResponse {
   memberName?: string;
 }
 
+type SortOption = 'time' | 'name' | 'amount';
+
 const AMOUNTS = [500000, 100000, 50000, 30000, 20000, 10000];
 const METHODS = ['cash', 'card', 'deposit_pending'] as const;
 
@@ -38,6 +40,7 @@ export default function ServiceFeePage() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<typeof METHODS[number] | null>(null);
   const [showMemberSelection, setShowMemberSelection] = useState(false);
+  const [sortOption, setSortOption] = useState<SortOption>('time');
 
   useEffect(() => {
     const cachedMembers = sessionStorage.getItem('members');
@@ -202,6 +205,30 @@ export default function ServiceFeePage() {
     setDate(newDate);
   };
 
+  // 정렬된 레코드 계산
+  const getSortedRecords = () => {
+    const recordsToSort = [...records];
+    
+    switch (sortOption) {
+      case 'name':
+        return recordsToSort.sort((a, b) => a.memberName.localeCompare(b.memberName));
+      case 'amount':
+        return recordsToSort.sort((a, b) => b.amount - a.amount);
+      case 'time':
+      default:
+        return recordsToSort; // 이미 시간순으로 정렬되어 있음
+    }
+  };
+
+  // 정렬된 기록 및 2열 배열로 변환
+  const sortedRecords = getSortedRecords();
+  const recordColumns = [[], []] as ServiceFeeRecord[][];
+  
+  sortedRecords.forEach((record, index) => {
+    const columnIndex = index % 2;
+    recordColumns[columnIndex].push(record);
+  });
+
   if (loading) return <div className={styles.container}>회원 목록을 불러오는 중...</div>;
 
   // 회원 이름을 3열로 정렬하기 위해 배열 재구성
@@ -326,18 +353,47 @@ export default function ServiceFeePage() {
       {records.length > 0 && (
         <div className={styles.summary}>
           <h2>기록된 봉사금</h2>
-          <div className={styles.recordsList}>
-            {records.map((record, index) => (
-              <div key={index} className={styles.recordItem}>
-                <span>{record.memberName}: {record.amount.toLocaleString()}원 ({
-                  record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : record.method === 'deposit_pending' ? '입금대기' : '입금'
-                })</span>
-                <button 
-                  onClick={() => handleDeleteRecord(record)}
-                  className={styles.deleteButton}
-                >
-                  삭제
-                </button>
+          
+          {/* 정렬 옵션 선택 */}
+          <div className={styles.sortOptions}>
+            <span>정렬: </span>
+            <button 
+              className={`${styles.sortButton} ${sortOption === 'time' ? styles.selected : ''}`}
+              onClick={() => setSortOption('time')}
+            >
+              기록순
+            </button>
+            <button 
+              className={`${styles.sortButton} ${sortOption === 'name' ? styles.selected : ''}`}
+              onClick={() => setSortOption('name')}
+            >
+              이름순
+            </button>
+            <button 
+              className={`${styles.sortButton} ${sortOption === 'amount' ? styles.selected : ''}`}
+              onClick={() => setSortOption('amount')}
+            >
+              금액순
+            </button>
+          </div>
+          
+          {/* 봉사금 내역 2열 표시 */}
+          <div className={styles.recordsGrid}>
+            {recordColumns.map((column, columnIndex) => (
+              <div key={columnIndex} className={styles.recordsColumn}>
+                {column.map((record, index) => (
+                  <div key={index} className={`${styles.recordItem} ${styles.compact}`}>
+                    <span>{record.memberName}: {record.amount.toLocaleString()}원 ({
+                      record.method === 'cash' ? '현금' : record.method === 'card' ? '카드' : record.method === 'deposit_pending' ? '입금대기' : '입금'
+                    })</span>
+                    <button 
+                      onClick={() => handleDeleteRecord(record)}
+                      className={styles.deleteButton}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
