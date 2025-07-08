@@ -1,136 +1,105 @@
 import { NextResponse } from 'next/server';
-import { notionClient, DATABASE_IDS, DEFAULT_SPECIAL_EVENT_FEE } from '@/lib/notion';
-import { 
-  PageObjectResponse,
-  PartialPageObjectResponse,
-  DatabaseObjectResponse,
-  PartialDatabaseObjectResponse
-} from '@notionhq/client/build/src/api-endpoints';
-
-interface NotionMasterInfoProperties {
-  specialevent_fee: {
-    number: number;
-  };
-}
-
-interface NotionEventProperties {
-  name: {
-    relation: Array<{
-      id: string;
-    }>;
-  };
-  date: {
-    date: {
-      start: string;
-    };
-  };
-  events: {
-    multi_select: Array<{
-      name: string;
-    }>;
-  };
-  nick: {
-    rollup: {
-      array: Array<{
-        rich_text: Array<{
-          plain_text: string;
-        }>;
-      }>;
-    };
-  };
-}
-
-interface NotionMemberProperties {
-  Name: {
-    title: Array<{
-      plain_text: string;
-    }>;
-  };
-}
-
-type NotionPage = PageObjectResponse | PartialPageObjectResponse | DatabaseObjectResponse | PartialDatabaseObjectResponse;
-
-function isFullPage(page: NotionPage): page is PageObjectResponse {
-  return 'properties' in page;
-}
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const memberName = searchParams.get('memberName');
+    const rotaryYear = searchParams.get('rotaryYear') || 'current';
 
     if (!memberName) {
       return NextResponse.json({ error: 'Member name is required' }, { status: 400 });
     }
 
-    // 특별 경조사 목록 조회
-    const eventsResponse = await notionClient.databases.query({
-      database_id: DATABASE_IDS.SPECIAL_EVENTS,
-      sorts: [
-        {
-          property: 'date',
-          direction: 'descending'
-        }
-      ]
-    });
+    console.log('calculateSpecialFee API 호출됨:', { memberName, rotaryYear });
 
-    // 마스터 정보에서 특별회비 금액 조회
-    const masterInfoResponse = await notionClient.databases.query({
-      database_id: DATABASE_IDS.MASTER_INFO,
-    });
-
-    // 안전하게 타입 처리
-    const firstResult = masterInfoResponse.results[0];
-    if (!firstResult || !isFullPage(firstResult)) {
-      throw new Error('Invalid response from Notion API');
+    // 회기 정보 조회
+    const keyName = rotaryYear === 'current' ? 'rotary_year_start' : 'previous_year_start';
+    const endKeyName = rotaryYear === 'current' ? 'rotary_year_end' : 'previous_year_end';
+    
+    const { data: rotaryYearInfo, error: rotaryError } = await supabase
+      .from('master_info')
+      .select('key, value')
+      .in('key', [keyName, endKeyName]);
+    
+    if (rotaryError) {
+      throw new Error(`회기 정보 조회 실패: ${rotaryError.message}`);
     }
-    const properties = firstResult.properties as unknown as NotionMasterInfoProperties;
-    const specialEventFee = properties?.specialevent_fee?.number || DEFAULT_SPECIAL_EVENT_FEE;
+    
+    const startDate = rotaryYearInfo?.find(item => item.key === keyName)?.value;
+    const endDate = rotaryYearInfo?.find(item => item.key === endKeyName)?.value;
+    
+    if (!startDate || !endDate) {
+      throw new Error('회기 정보를 찾을 수 없습니다.');
+    }
+    
+    console.log('Rotary year date range for special events:', startDate, 'to', endDate);
 
-    // 결과 매핑 시 안전하게 타입 처리
-    const events = await Promise.all(eventsResponse.results.map(async (page) => {
-      if (!isFullPage(page)) {
-        throw new Error('Invalid page object from Notion API');
-      }
-      const pageProperties = page.properties as unknown as NotionEventProperties;
-      
-      // 회원 정보 조회
-      const memberId = pageProperties.name?.relation?.[0]?.id;
-      let memberNameFromDb = '';
-      
-      if (memberId) {
-        const memberResponse = await notionClient.pages.retrieve({ page_id: memberId });
-        if (!isFullPage(memberResponse)) {
-          throw new Error('Invalid member response from Notion API');
-        }
-        const memberProperties = memberResponse.properties as unknown as NotionMemberProperties;
-        memberNameFromDb = memberProperties.Name?.title?.[0]?.plain_text || '';
-      }
+    // 해당 회기의 특별 경조사 목록 조회 (날짜 범위로 필터링)
+    const { data: events, error: eventsError } = await supabase
+      .from('special_events')
+      .select('*')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false });
 
-      const date = pageProperties.date?.date?.start || '';
-      const eventsList = pageProperties.events?.multi_select?.map(item => item.name) || [];
-      const events = eventsList.join(', ');
-      const isPersonal = memberName ? memberNameFromDb === memberName : false;
-      const nickname = pageProperties.nick?.rollup?.array[0]?.rich_text[0]?.plain_text || '';
+    if (eventsError) {
+      throw new Error(`특별 이벤트 조회 실패: ${eventsError.message}`);
+    }
+
+    // 마스터 정보에서 특별회비 금액 조회 (key-value 구조)
+    const { data: masterInfo, error: masterError } = await supabase
+      .from('master_info')
+      .select('value')
+      .eq('key', 'special_event_fee')
+      .single();
+
+    if (masterError) {
+      throw new Error(`마스터 정보 조회 실패: ${masterError.message}`);
+    }
+
+    const specialEventFee = masterInfo?.value ? parseInt(masterInfo.value) : 20000; // 기본값 20,000원
+
+    // member_name이 비어있는 경우를 위해 모든 회원 정보를 조회
+    const { data: members, error: membersError } = await supabase
+      .from('members')
+      .select('id, name');
+
+    if (membersError) {
+      throw new Error(`회원 정보 조회 실패: ${membersError.message}`);
+    }
+
+    // 회원 ID와 이름 매핑
+    const memberMap = new Map();
+    members?.forEach(member => {
+      memberMap.set(member.id, member.name);
+    });
+
+    // 이벤트 데이터 매핑
+    const mappedEvents = events?.map(event => {
+      // member_name이 비어있으면 member_id로 실제 이름 조회
+      const actualMemberName = event.member_name || memberMap.get(event.member_id) || '';
       
       return {
-        id: page.id,
-        name: memberNameFromDb,
-        nickname,
-        date,
-        events,
-        isPersonal,
+        id: event.id,
+        name: actualMemberName,
+        nickname: event.nickname || '',
+        date: event.date || '',
+        events: event.event_type || '',
+        isPersonal: actualMemberName === memberName,
       };
-    }));
+    }) || [];
 
     // 본인 경조사가 아닌 이벤트만 필터링
-    const payableEvents = events.filter(event => !event.isPersonal);
+    const payableEvents = mappedEvents.filter(event => !event.isPersonal);
     const totalFee = payableEvents.length * specialEventFee;
 
     return NextResponse.json({
       events: payableEvents,
       totalFee,
       specialEventFee,
+      rotaryYear: rotaryYear === 'current' ? '25-26' : '24-25',
+      dateRange: `${startDate} ~ ${endDate}`
     });
   } catch (error) {
     console.error('Error calculating special fee:', error);

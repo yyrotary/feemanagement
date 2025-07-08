@@ -38,6 +38,7 @@ export default function ServiceFeePage() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [selectedMethod, setSelectedMethod] = useState<typeof METHODS[number] | null>(null);
   const [showMemberSelection, setShowMemberSelection] = useState(false);
+  const [rotaryYear, setRotaryYear] = useState<'current' | 'previous'>('current');
 
   useEffect(() => {
     const cachedMembers = sessionStorage.getItem('members');
@@ -69,9 +70,11 @@ export default function ServiceFeePage() {
     const loadServiceFees = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/getServiceFees?date=${date}`);
+        const response = await fetch(`/api/getServiceFees?date=${date}&rotaryYear=${rotaryYear}`);
         if (!response.ok) throw new Error('봉사금 기록 로드 실패');
         const data = await response.json();
+        
+        console.log('봉사금 API 응답:', data);
         
         // API는 { fees: [...] } 형식으로 데이터를 반환
         if (Array.isArray(data.fees)) {
@@ -100,7 +103,7 @@ export default function ServiceFeePage() {
 
     loadServiceFees();
     return () => {};
-  }, [date]);
+  }, [date, rotaryYear]);
 
   const handleCellClick = (amount: number, method: typeof METHODS[number]) => {
     setSelectedAmount(amount);
@@ -123,7 +126,8 @@ export default function ServiceFeePage() {
           date, 
           memberId, 
           amount: selectedAmount, 
-          method: selectedMethod 
+          method: selectedMethod,
+          rotaryYear 
         }),
       });
 
@@ -226,6 +230,22 @@ export default function ServiceFeePage() {
         />
       </div>
 
+      {/* 회기 선택 */}
+      <div className={styles.rotaryYearSelector}>
+        <button
+          className={rotaryYear === 'current' ? styles.activeRotaryYear : styles.inactiveRotaryYear}
+          onClick={() => setRotaryYear('current')}
+        >
+          현재 회기 (25-26)
+        </button>
+        <button
+          className={rotaryYear === 'previous' ? styles.activeRotaryYear : styles.inactiveRotaryYear}
+          onClick={() => setRotaryYear('previous')}
+        >
+          이전 회기 (24-25)
+        </button>
+      </div>
+
       {/* 금액 및 납부 방법 표 */}
       <table className={styles.feeTable}>
         <thead>
@@ -324,7 +344,7 @@ export default function ServiceFeePage() {
 
       {records.length > 0 && (
         <div className={styles.summary}>
-          <h2>기록된 봉사금</h2>
+          <h2>기록된 봉사금 ({rotaryYear === 'current' ? '현재 회기 (25-26)' : '이전 회기 (24-25)'})</h2>
           <div className={styles.recordsList}>
             {records.map((record, index) => (
               <div key={index} className={styles.recordItem}>

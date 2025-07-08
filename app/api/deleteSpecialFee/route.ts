@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { notionClient } from '@/lib/notion';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
@@ -9,11 +9,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '기록 ID는 필수입니다.' }, { status: 400 });
     }
 
-    // Notion API를 사용하여 페이지 삭제 (보관 처리)
-    await notionClient.pages.update({
-      page_id: recordId,
-      archived: true
-    });
+    // Supabase에서 특별회비 기록 삭제
+    const { error } = await supabase
+      .from('special_fees')
+      .delete()
+      .eq('id', recordId);
+
+    if (error) {
+      throw new Error(`특별회비 기록 삭제 실패: ${error.message}`);
+    }
 
     // 성공 응답 반환
     return NextResponse.json({

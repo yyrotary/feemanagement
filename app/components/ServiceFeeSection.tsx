@@ -19,6 +19,7 @@ interface ServiceFeeSectionProps {
   memberName: string;
   nickname?: string;
   date?: string;
+  rotaryYear?: 'current' | 'previous';
 }
 
 // 납부 방법 변환 함수
@@ -36,7 +37,11 @@ const formatPaymentMethod = (methods: string[] | undefined): string => {
   }).join(', ');
 };
 
-export default function ServiceFeeSection({ memberId, date }: ServiceFeeSectionProps) {
+export default function ServiceFeeSection({ 
+  memberId, 
+  date, 
+  rotaryYear = 'current' 
+}: ServiceFeeSectionProps) {
   const [fees, setFees] = useState<ServiceFee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +62,7 @@ export default function ServiceFeeSection({ memberId, date }: ServiceFeeSectionP
         // 쿼리 파라미터 구성
         const queryParams = new URLSearchParams();
         queryParams.append('memberId', memberId);
+        queryParams.append('rotaryYear', rotaryYear);
         
         // 날짜가 있는 경우 추가
         if (date) {
@@ -101,7 +107,7 @@ export default function ServiceFeeSection({ memberId, date }: ServiceFeeSectionP
     };
 
     fetchData();
-  }, [memberId, date]);
+  }, [memberId, date, rotaryYear]); // rotaryYear 의존성 추가
 
   if (loading) {
     return <div className={styles.loading}>로딩 중...</div>;

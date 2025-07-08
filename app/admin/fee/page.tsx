@@ -57,6 +57,7 @@ export default function FeePage() {
   const [selectedMethod, setSelectedMethod] = useState<typeof METHODS[number] | null>(null);
   const [showMemberSelection, setShowMemberSelection] = useState(false);
   const [feeType, setFeeType] = useState<'general' | 'special'>('general');
+  const [rotaryYear, setRotaryYear] = useState<'current' | 'previous'>('current');
 
   useEffect(() => {
     const cachedMembers = sessionStorage.getItem('members');
@@ -86,13 +87,13 @@ export default function FeePage() {
 
   useEffect(() => {
     loadFees();
-  }, [date, feeType]);
+  }, [date, feeType, rotaryYear]);
 
   const loadFees = async () => {
     try {
       setLoading(true);
       if (feeType === 'general') {
-        const response = await fetch(`/api/getFees?date=${date}`);
+        const response = await fetch(`/api/getFees?date=${date}&rotaryYear=${rotaryYear}`);
         if (!response.ok) throw new Error('회비 기록 로드 실패');
         const data = await response.json();
         
@@ -112,7 +113,7 @@ export default function FeePage() {
           setRecords([]);
         }
       } else {
-        const response = await fetch(`/api/getSpecialFeesByDate?date=${date}`);
+        const response = await fetch(`/api/getSpecialFeesByDate?date=${date}&rotaryYear=${rotaryYear}`);
         if (!response.ok) throw new Error('특별회비 기록 로드 실패');
         const data = await response.json();
         
@@ -323,6 +324,22 @@ export default function FeePage() {
           onChange={(e) => handleDateChange(e.target.value)}
           className={styles.dateInput}
         />
+      </div>
+
+      {/* 회기 선택 */}
+      <div className={styles.rotaryYearSelector}>
+        <button
+          className={rotaryYear === 'current' ? styles.activeRotaryYear : styles.inactiveRotaryYear}
+          onClick={() => setRotaryYear('current')}
+        >
+          현재 회기 (25-26)
+        </button>
+        <button
+          className={rotaryYear === 'previous' ? styles.activeRotaryYear : styles.inactiveRotaryYear}
+          onClick={() => setRotaryYear('previous')}
+        >
+          이전 회기 (24-25)
+        </button>
       </div>
 
       {/* 금액 및 납부 방법 표 */}

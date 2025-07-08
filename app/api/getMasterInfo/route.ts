@@ -1,29 +1,25 @@
 import { NextResponse } from 'next/server';
-import { notionClient, DATABASE_IDS } from '@/lib/notion';
-import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
-
-interface NotionMasterInfoProperties {
-  exchange_rate: {
-    number: number;
-  };
-}
+import { supabase } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const response = await notionClient.databases.query({
-      database_id: DATABASE_IDS.MASTER_INFO,
-      page_size: 1,
-    });
+    // exchange_rate 정보만 조회
+    const { data: masterInfo, error } = await supabase
+      .from('master_info')
+      .select('value')
+      .eq('key', 'exchange_rate')
+      .single();
 
-    if (response.results.length === 0) {
-      return NextResponse.json({ error: '마스터 정보를 찾을 수 없습니다.' }, { status: 404 });
+    if (error) {
+      throw new Error(`마스터 정보 조회 실패: ${error.message}`);
     }
 
-    const page = response.results[0] as PageObjectResponse;
-    const properties = page.properties as unknown as NotionMasterInfoProperties;
+    if (!masterInfo) {
+      return NextResponse.json({ error: '마스터 정보를 찾을 수 없습니다.' }, { status: 404 });
+    }
     
     return NextResponse.json({
-      exchange_rate: properties.exchange_rate?.number || 0
+      exchange_rate: masterInfo.value ? parseInt(masterInfo.value) : 0
     });
   } catch (error) {
     console.error('Error fetching master info:', error);

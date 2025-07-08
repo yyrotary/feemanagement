@@ -1,52 +1,42 @@
 import { NextResponse } from 'next/server';
-import { notionClient, DATABASE_IDS } from '@/lib/notion';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
     const { date, memberId, paid_fee, method, class: donationClass } = await request.json();
 
-    // Notion API를 사용하여 새 페이지 생성
-    const response = await notionClient.pages.create({
-      parent: {
-        database_id: DATABASE_IDS.DONATIONS
-      },
-      properties: {
-        // 관계형 필드 설정
-        name: {
-          relation: [
-            {
-              id: memberId
-            }
-          ]
-        },
-        date: {
-          date: {
-            start: date
-          }
-        },
-        paid_fee: {
-          number: paid_fee
-        },
-        method: {
-          multi_select: [
-            {
-              name: method
-            }
-          ]
-        },
-        class: {
-          multi_select: [
-            {
-              name: donationClass
-            }
-          ]
-        }
-      }
-    });
+    // 회원 이름 조회
+    const { data: member, error: memberError } = await supabase
+      .from('members')
+      .select('name')
+      .eq('id', memberId)
+      .single();
 
-    // 생성된 페이지의 ID를 반환
+    if (memberError) {
+      throw new Error(`회원 정보 조회 실패: ${memberError.message}`);
+    }
+
+    // Supabase에 새 기부 기록 생성
+    const { data: donation, error } = await supabase
+      .from('donations')
+      .insert({
+        member_id: memberId,
+        member_name: member?.name || '회원',
+        date: date,
+        amount: paid_fee,
+        method: method,
+        category: [donationClass] // 배열 형태로 저장
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      throw new Error(`기부 기록 생성 실패: ${error.message}`);
+    }
+
+    // 생성된 레코드의 ID를 반환
     return NextResponse.json({
-      id: response.id,
+      id: donation.id,
       success: true
     });
   } catch (error) {

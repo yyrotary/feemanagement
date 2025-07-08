@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { notionClient, TRANSACTIONS_DB_ID } from '@/lib/notion';
-import type { Transaction } from '@/lib/notion-types';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: Request) {
   try {
@@ -10,81 +9,48 @@ export async function GET(request: Request) {
     const endDate = searchParams.get('endDate');
     const description = searchParams.get('description');
     
-    // 필터 설정
-    const filter: any = {
-      and: []
-    };
+    // 기본 쿼리 설정
+    let query = supabase
+      .from('transactions')
+      .select('*')
+      .order('date', { ascending: false });
     
     // 날짜 필터 추가
     if (startDate) {
-      filter.and.push({
-        property: 'date',
-        date: {
-          on_or_after: startDate,
-        },
-      });
+      query = query.gte('date', startDate);
     }
     
     if (endDate) {
-      filter.and.push({
-        property: 'date',
-        date: {
-          on_or_before: endDate,
-        },
-      });
+      query = query.lte('date', endDate);
     }
     
     // 내용 필터 추가
     if (description) {
-      filter.and.push({
-        property: 'description',
-        rich_text: {
-          contains: description,
-        },
-      });
+      query = query.ilike('description', `%${description}%`);
     }
     
-    // 필터가 없는 경우 기본 필터 제거
-    if (filter.and.length === 0) {
-      delete filter.and;
+    const { data: transactions, error } = await query;
+    
+    if (error) {
+      throw error;
     }
     
-    // 노션 데이터베이스 쿼리
-    const queryOptions: any = {
-      database_id: TRANSACTIONS_DB_ID,
-      sorts: [
-        {
-          property: 'date',
-          direction: 'descending',
-        },
-      ],
-    };
-    
-    // 필터가 있는 경우에만 필터 추가
-    if (filter.and && filter.and.length > 0) {
-      queryOptions.filter = filter;
-    }
-    
-    const response = await notionClient.databases.query(queryOptions);
-    
-    // 결과 변환
-    const transactions: Transaction[] = response.results.map((page: any) => {
-      return {
-        id: page.id,
-        date: page.properties.date?.date?.start || '',
-        in: page.properties.in?.number || 0,
-        out: page.properties.out?.number || 0,
-        balance: page.properties.balance?.number || 0,
-        description: page.properties.description?.rich_text?.[0]?.plain_text || '',
-        branch: page.properties.branch?.rich_text?.[0]?.plain_text || '',
-        bank: page.properties.bank?.rich_text?.[0]?.plain_text || '',
-        memo: page.properties.memo?.rich_text?.[0]?.plain_text || '',
-      };
-    });
+    // 결과 변환 (기존 API 응답 형식 유지)
+    const formattedTransactions = transactions.map(transaction => ({
+      id: transaction.id,
+      date: transaction.date,
+      in: transaction.in_amount || 0,
+      out: transaction.out_amount || 0,
+      balance: transaction.balance || 0,
+      description: transaction.description || '',
+      branch: transaction.branch || '',
+      bank: transaction.bank || '',
+      memo: transaction.memo || '',
+    }));
     
     return NextResponse.json({
-      transactions,
-      count: transactions.length,
+      transactions: formattedTransactions,
+      count: formattedTransactions.length,
     });
   } catch (error) {
     console.error('거래내역 조회 중 오류 발생:', error);

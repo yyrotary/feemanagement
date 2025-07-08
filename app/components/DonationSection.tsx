@@ -6,9 +6,13 @@ interface DonationSectionProps {
   memberId: string;
   memberName: string;
   nickname?: string;
+  rotaryYear?: 'current' | 'previous';
 }
 
-export default function DonationSection({ memberId }: DonationSectionProps) {
+export default function DonationSection({ 
+  memberId, 
+  rotaryYear = 'current' 
+}: DonationSectionProps) {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [friendDonations, setFriendDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,8 +31,8 @@ export default function DonationSection({ memberId }: DonationSectionProps) {
         setLoading(true);
         setError(null);
 
-        // 기존 기부 데이터 조회
-        const response = await fetch(`/api/getDonations?memberId=${encodeURIComponent(memberId)}`);
+        // 기존 기부 데이터 조회에 회기 파라미터 추가
+        const response = await fetch(`/api/getDonations?memberId=${encodeURIComponent(memberId)}&rotaryYear=${rotaryYear}`);
         
         if (!response.ok) {
           throw new Error('기부 내역을 불러오는데 실패했습니다.');
@@ -37,8 +41,8 @@ export default function DonationSection({ memberId }: DonationSectionProps) {
         const data = await response.json();
         setDonations(data.donations || []);
         
-        // 우정기부 데이터 조회 (from_friend가 현재 회원인 기부 내역)
-        const friendResponse = await fetch(`/api/getFriendDonations?friendId=${encodeURIComponent(memberId)}`);
+        // 우정기부 데이터 조회에 회기 파라미터 추가
+        const friendResponse = await fetch(`/api/getFriendDonations?friendId=${encodeURIComponent(memberId)}&rotaryYear=${rotaryYear}`);
         
         if (friendResponse.ok) {
           const friendData = await friendResponse.json();
@@ -53,7 +57,7 @@ export default function DonationSection({ memberId }: DonationSectionProps) {
     };
 
     fetchData();
-  }, [memberId]);
+  }, [memberId, rotaryYear]); // rotaryYear 의존성 추가
 
   if (loading) {
     return <div className={styles.loading}>로딩 중...</div>;

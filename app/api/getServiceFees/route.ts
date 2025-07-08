@@ -1,164 +1,122 @@
 import { NextResponse } from 'next/server';
-import { notionClient, DATABASE_IDS } from '@/lib/notion';
-import { 
-  PageObjectResponse, 
-  QueryDatabaseParameters 
-} from '@notionhq/client/build/src/api-endpoints';
-
-interface NotionFeeProperties {
-  name: {
-    relation: Array<{
-      id: string;
-    }>;
-  };
-  paid_fee: {
-    number: number;
-  };
-  date: {
-    date: {
-      start: string;
-    };
-  };
-  method: {
-    multi_select: Array<{
-      name: string;
-    }>;
-  };
-}
-
-interface NotionMemberProperties {
-  Name: {
-    title: Array<{
-      plain_text: string;
-    }>;
-  };
-  nick: {
-    rich_text: Array<{
-      plain_text: string;
-    }>;
-  };
-}
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get('memberId');
     const date = searchParams.get('date');
+    const rotaryYear = searchParams.get('rotaryYear') || 'current';
 
-    console.log('Request params:', { memberId, date });
+    console.log('Request params:', { memberId, date, rotaryYear });
 
-    // 필터와 쿼리 옵션 초기화
-    let filter: QueryDatabaseParameters['filter'] = undefined;
-    const queryOptions: QueryDatabaseParameters = {
-      database_id: DATABASE_IDS.SERVICE_FEES,
-      sorts: [
-        {
-          property: 'date',
-          direction: 'descending'
-        }
-      ]
-    };
+    // 회기 정보 조회
+    const keyName = rotaryYear === 'current' ? 'rotary_year_start' : 'previous_year_start';
+    const endKeyName = rotaryYear === 'current' ? 'rotary_year_end' : 'previous_year_end';
+    
+    const { data: rotaryYearInfo, error: rotaryError } = await supabase
+      .from('master_info')
+      .select('key, value')
+      .in('key', [keyName, endKeyName]);
+    
+    if (rotaryError) {
+      throw new Error(`회기 정보 조회 실패: ${rotaryError.message}`);
+    }
+    
+    const startDate = rotaryYearInfo?.find(item => item.key === keyName)?.value;
+    const endDate = rotaryYearInfo?.find(item => item.key === endKeyName)?.value;
+    
+    if (!startDate || !endDate) {
+      throw new Error('회기 정보를 찾을 수 없습니다.');
+    }
+    
+    console.log('Rotary year date range for service fees:', startDate, 'to', endDate);
 
-    // 필터 설정
+    // 먼저 회원 정보 조회 (memberId가 있는 경우)
+    let memberInfo = null;
+    if (memberId) {
+      const { data: member, error: memberError } = await supabase
+        .from('members')
+        .select('id, name, nickname')
+        .eq('id', memberId)
+        .single();
+
+      if (memberError) {
+        console.error('Member 조회 에러:', memberError);
+      } else {
+        memberInfo = member;
+        console.log('Member 정보:', memberInfo);
+      }
+    }
+
+    // 기본 쿼리 설정 (회기 날짜 범위 적용)
+    let query = supabase
+      .from('service_fees')
+      .select(`
+        id,
+        member_id,
+        member_name,
+        amount,
+        date,
+        method,
+        created_at
+      `)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false });
+
+    // 필터 적용
     if (memberId && date) {
-      // memberId와 date 모두 있는 경우
-      filter = {
-        and: [
-          {
-            property: 'name',
-            relation: {
-              contains: memberId
-            }
-          },
-          {
-            property: 'date',
-            date: {
-              equals: date
-            }
-          }
-        ]
-      };
+      query = query.eq('member_id', memberId).eq('date', date);
     } else if (memberId) {
-      // memberId만 있는 경우
-      filter = {
-        property: 'name',
-        relation: {
-          contains: memberId
-        }
-      };
+      query = query.eq('member_id', memberId);
     } else if (date) {
-      // date만 있는 경우
-      filter = {
-        property: 'date',
-        date: {
-          equals: date
-        }
-      };
+      query = query.eq('date', date);
     }
 
-    if (filter) {
-      queryOptions.filter = filter;
+    const { data: fees, error } = await query;
+
+    if (error) {
+      console.error('봉사금 조회 에러:', error);
+      throw error;
     }
 
-    // 봉사금 데이터 조회
-    const response = await notionClient.databases.query(queryOptions);
-    console.log('Fee records count:', response.results.length);
+    console.log('조회된 봉사금 데이터:', fees);
 
-    // 모든 회원 정보를 한 번에 가져오기
-    const membersResponse = await notionClient.databases.query({
-      database_id: DATABASE_IDS.MEMBERS,
-      page_size: 100 // 최대 100명의 회원 정보 가져오기
-    });
-    console.log('Total members loaded:', membersResponse.results.length);
-
-    // 회원 ID별 매핑 생성
-    const memberMap: Record<string, { name: string, nickname: string }> = {};
-    membersResponse.results.forEach(member => {
-      const memberObj = member as PageObjectResponse;
-      const properties = memberObj.properties as unknown as NotionMemberProperties;
+    // 각 봉사금 레코드에 대해 회원 정보 조회
+    const formattedFeesPromises = fees.map(async (fee) => {
+      let memberName = fee.member_name || '회원';
       
-      try {
-        const name = properties.Name?.title[0]?.plain_text || '회원';
-        const nickname = properties.nick?.rich_text[0]?.plain_text || '';
-        memberMap[memberObj.id] = { name, nickname };
-      } catch (error) {
-        console.error(`Error parsing member ${memberObj.id}:`, error);
-        memberMap[memberObj.id] = { name: '회원', nickname: '' };
-      }
-    });
-
-    // 봉사금 데이터에 회원 이름 매핑
-    const fees = response.results.map(page => {
-      const pageObj = page as PageObjectResponse;
-      const properties = pageObj.properties as unknown as NotionFeeProperties;
-      
-      const memberRelations = properties.name?.relation || [];
-      let memberName = '회원';
-      let memberId = '';
-      
-      if (memberRelations.length > 0) {
-        memberId = memberRelations[0].id;
-        const memberInfo = memberMap[memberId];
+      // member_id가 있으면 최신 회원 정보 조회
+      if (fee.member_id) {
+        const { data: member, error: memberError } = await supabase
+          .from('members')
+          .select('name')
+          .eq('id', fee.member_id)
+          .single();
         
-        if (memberInfo) {
-          memberName = memberInfo.name;
+        if (!memberError && member) {
+          memberName = member.name;
         }
       }
-
-      const methods = properties.method?.multi_select?.map(m => m.name) || ['cash'];
-      console.log('Service Fee methods from Notion:', methods);
-
+      
       return {
-        id: pageObj.id,
-        memberId,
-        memberName,
-        amount: properties.paid_fee?.number || 0,
-        date: properties.date?.date?.start || '',
-        method: methods,
+        id: fee.id,
+        memberId: fee.member_id,
+        memberName: memberName,
+        amount: fee.amount,
+        date: fee.date,
+        method: Array.isArray(fee.method) ? fee.method : [fee.method || 'cash'],
       };
     });
 
-    return NextResponse.json({ fees });
+    const formattedFees = await Promise.all(formattedFeesPromises);
+
+    return NextResponse.json({ 
+      fees: formattedFees,
+      rotaryYear: rotaryYear === 'current' ? '25-26' : '24-25',
+      dateRange: `${startDate} ~ ${endDate}`
+    });
   } catch (error) {
     console.error('Error fetching service fees:', error);
     return NextResponse.json({ 

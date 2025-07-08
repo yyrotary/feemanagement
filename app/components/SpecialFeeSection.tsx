@@ -21,9 +21,14 @@ interface SpecialFeeSectionProps {
   memberId: string;
   memberName: string;
   nickname?: string;
+  rotaryYear?: 'current' | 'previous';
 }
 
-export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSectionProps) {
+export default function SpecialFeeSection({ 
+  memberId, 
+  memberName, 
+  rotaryYear = 'current' 
+}: SpecialFeeSectionProps) {
   const [calculation, setCalculation] = useState<SpecialFeeCalculation | null>(null);
   const [fees, setFees] = useState<SpecialFee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,12 +38,15 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
   const [events, setEvents] = useState<SpecialEvent[]>([]);
 
   // 경조사 목록을 가져오는 함수
-  const fetchEvents = async () => {
-    if (!memberName || events.length > 0) return;
+  const fetchEvents = async (forceRefresh = false) => {
+    if (!memberName) return;
+    
+    // forceRefresh가 true이거나 events가 비어있을 때만 실행
+    if (!forceRefresh && events.length > 0) return;
     
     try {
       setEventsLoading(true);
-      const response = await fetch(`/api/calculateSpecialFee?memberName=${encodeURIComponent(memberName)}`);
+      const response = await fetch(`/api/calculateSpecialFee?memberName=${encodeURIComponent(memberName)}&rotaryYear=${rotaryYear}`);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -79,10 +87,13 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
         setLoading(true);
         setError(null);
 
-        // 특별회비 총액과 납부 내역만 먼저 가져옴
+        // 회기가 변경되면 경조사 목록도 초기화
+        setEvents([]);
+
+        // 특별회비 총액과 납부 내역에 회기 파라미터 추가
         const [calcResponse, feesResponse] = await Promise.all([
-          fetch(`/api/calculateSpecialFee?memberName=${encodeURIComponent(memberName)}`),
-          fetch(`/api/getSpecialFees?memberId=${encodeURIComponent(memberId)}`)
+          fetch(`/api/calculateSpecialFee?memberName=${encodeURIComponent(memberName)}&rotaryYear=${rotaryYear}`),
+          fetch(`/api/getSpecialFees?memberId=${encodeURIComponent(memberId)}&rotaryYear=${rotaryYear}`)
         ]);
 
         if (!calcResponse.ok || !feesResponse.ok) {
@@ -102,8 +113,8 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
         });
         setFees(feesData.fees || []);
 
-        // 컴포넌트 로드 시 경조사 목록 바로 가져오기
-        fetchEvents();
+        // 컴포넌트 로드 시 경조사 목록 바로 가져오기 (강제 새로고침)
+        fetchEvents(true);
       } catch (err) {
         console.error('Error fetching special fee data:', err);
         setError(err instanceof Error ? err.message : '데이터를 불러오는데 실패했습니다.');
@@ -115,7 +126,7 @@ export default function SpecialFeeSection({ memberId, memberName }: SpecialFeeSe
     };
 
     fetchData();
-  }, [memberId, memberName]);
+  }, [memberId, memberName, rotaryYear]); // rotaryYear 의존성 추가
 
   if (loading) {
     return <div className={styles.loading}>로딩 중...</div>;

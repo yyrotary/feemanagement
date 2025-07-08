@@ -17,6 +17,10 @@ export default function Dashboard() {
         <h1>관리자 메뉴</h1>
       </div>
       <div className={styles.menuGrid}>
+        <Link href="/admin/payment-overview" className={styles.menuItem}>
+          <span className={styles.menuIcon}>📊</span>
+          <span className={styles.menuText}>회기별 납부현황</span>
+        </Link>
         <Link href="/admin/fee" className={styles.menuItem}>
           <span className={styles.menuIcon}>💰</span>
           <span className={styles.menuText}>회비 기록</span>

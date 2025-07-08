@@ -1,0 +1,464 @@
+# 프로젝트 문서화
+
+## 🎯 비즈니스 요구사항
+
+### 핵심 목표
+- 영양 로타리클럽 회원들의 회비 관리 효율화
+- 투명한 회비 현황 공유
+- 관리자의 업무 부담 경감
+- 자동화를 통한 정확성 향상
+
+### 사용자 스토리
+
+#### 회원 (일반 사용자)
+```
+As a 로타리클럽 회원
+I want to 내 회비 현황을 쉽게 조회하고 싶다
+So that 납부 상황을 정확히 파악할 수 있다
+```
+
+#### 관리자 (재무담당자)
+```
+As a 재무담당자
+I want to 회비를 효율적으로 관리하고 싶다
+So that 정확한 회계 처리가 가능하다
+```
+
+## 🏗 시스템 아키텍처
+
+### High-Level Architecture
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   Backend       │    │   External      │
+│   (Next.js)     │◄──►│   (API Routes)  │◄──►│   (Notion API)  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         ▲                        ▲                        ▲
+         │                        │                        │
+         ▼                        ▼                        ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   UI Components │    │   Business      │    │   Gmail API     │
+│   CSS Modules   │    │   Logic         │    │   (Auto Sync)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### Data Flow Diagram
+```
+사용자 입력 (전화번호) 
+    ↓
+입력 검증 및 포맷팅
+    ↓
+Notion API 호출 (회원 조회)
+    ↓
+관련 회비 데이터 수집
+    ↓
+비즈니스 로직 적용 (계산)
+    ↓
+응답 데이터 구성
+    ↓
+UI 렌더링
+```
+
+## 📊 데이터 모델
+
+### 회원 (Members)
+```typescript
+interface Member {
+  id: string;           // Notion Page ID
+  name: string;         // 회원 이름
+  nickname?: string;    // 별명
+  phone: number;        // 전화번호 뒷 4자리
+  deduction: string[];  // 할인 유형 (senior 등)
+}
+```
+
+### 회비 (Fees)
+```typescript
+interface Fee {
+  id: string;           // Notion Page ID
+  member: string;       // Member ID (Relation)
+  date: string;         // 납부 날짜
+  paid_fee: number;     // 납부 금액
+  method: string[];     // 납부 방법 (cash, card, deposit)
+}
+```
+
+### 특별회비 (Special Fees)
+```typescript
+interface SpecialFee {
+  id: string;           // Notion Page ID
+  member: string;       // Member ID (Relation)
+  date: string;         // 납부 날짜
+  amount: number;       // 납부 금액
+  method: string[];     // 납부 방법
+}
+```
+
+### 특별 이벤트 (Special Events)
+```typescript
+interface SpecialEvent {
+  id: string;           // Notion Page ID
+  date: string;         // 이벤트 날짜
+  name: string;         // 대상자 이름
+  nickname?: string;    // 대상자 별명
+  events: string;       // 이벤트 유형 (결혼, 장례 등)
+}
+```
+
+## 🔧 API 명세서
+
+### 1. 회원 회비 조회
+```http
+POST /api/getMemberFees
+Content-Type: application/json
+
+{
+  "phone": "1234"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "notion-page-id",
+  "name": "홍길동",
+  "nickname": "길동이",
+  "totalPaid": 720000,
+  "remainingFee": 0,
+  "feeHistory": [
+    {
+      "date": "2024-01-15",
+      "paid_fee": 360000,
+      "method": ["deposit"]
+    }
+  ]
+}
+```
+
+### 2. 특별회비 계산
+```http
+GET /api/calculateSpecialFee?memberName=홍길동
+```
+
+**Response:**
+```json
+{
+  "totalFee": 100000,
+  "specialEventFee": 20000,
+  "events": [
+    {
+      "id": "event-id",
+      "date": "2024-01-01",
+      "name": "김철수",
+      "events": "결혼"
+    }
+  ]
+}
+```
+
+### 3. 관리자 인증
+```http
+POST /api/verifyAdmin
+Content-Type: application/json
+
+{
+  "password": "admin-password"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+### 4. 회비 추가
+```http
+POST /api/addFee
+Content-Type: application/json
+
+{
+  "memberId": "notion-page-id",
+  "amount": 360000,
+  "date": "2024-01-15",
+  "method": ["deposit"]
+}
+```
+
+## 🎨 UI/UX 설계
+
+### Design System
+
+#### Color Palette
+```css
+:root {
+  --primary-blue: #1f4788;      /* 로타리 블루 */
+  --accent-gold: #f7931e;       /* 로타리 골드 */
+  --success-green: #28a745;     /* 성공 */
+  --warning-orange: #ffc107;    /* 경고 */
+  --error-red: #dc3545;         /* 오류 */
+  --text-dark: #333333;         /* 기본 텍스트 */
+  --text-light: #666666;        /* 보조 텍스트 */
+  --background: #ffffff;        /* 배경 */
+  --border: #e9ecef;           /* 테두리 */
+}
+```
+
+#### Typography
+```css
+.title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--primary-blue);
+}
+
+.subtitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.body {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text-dark);
+}
+
+.caption {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: var(--text-light);
+}
+```
+
+### Component Library
+
+#### Button
+```tsx
+interface ButtonProps {
+  variant: 'primary' | 'secondary' | 'danger';
+  size: 'small' | 'medium' | 'large';
+  disabled?: boolean;
+  loading?: boolean;
+  children: React.ReactNode;
+  onClick?: () => void;
+}
+```
+
+#### Input
+```tsx
+interface InputProps {
+  type: 'text' | 'number' | 'email' | 'password';
+  placeholder?: string;
+  value: string;
+  onChange: (value: string) => void;
+  maxLength?: number;
+  pattern?: string;
+  required?: boolean;
+  error?: string;
+}
+```
+
+#### Table
+```tsx
+interface TableProps {
+  headers: string[];
+  data: any[][];
+  sortable?: boolean;
+  pagination?: boolean;
+}
+```
+
+## 🔒 보안 설계
+
+### Authentication
+- **관리자 인증**: 비밀번호 기반 (향후 JWT 토큰으로 개선 예정)
+- **세션 관리**: NextAuth.js 활용 (구현 준비 중)
+
+### Authorization
+- **공개 접근**: 회비 조회 기능
+- **관리자 전용**: 회비 관리, 대시보드, 설정
+
+### Data Protection
+- **입력 검증**: 클라이언트/서버 양측 검증
+- **SQL Injection 방지**: Notion API 사용으로 자연스럽게 방지
+- **XSS 방지**: React의 기본 XSS 보호 활용
+
+### API Security
+```typescript
+// API 라우트 보호 패턴
+export async function POST(request: Request) {
+  try {
+    // 1. 입력 검증
+    const { phone } = await request.json();
+    if (!phone || phone.length !== 4) {
+      return NextResponse.json({ error: '올바른 전화번호를 입력하세요.' }, { status: 400 });
+    }
+
+    // 2. 비즈니스 로직
+    // ...
+
+    // 3. 안전한 응답
+    return NextResponse.json(data);
+  } catch (error) {
+    // 4. 에러 처리 (민감 정보 노출 방지)
+    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
+  }
+}
+```
+
+## 🚀 배포 및 DevOps
+
+### Deployment Pipeline
+```mermaid
+graph LR
+    A[Local Development] --> B[Git Push]
+    B --> C[Vercel Build]
+    C --> D[Automated Tests]
+    D --> E[Production Deploy]
+    E --> F[Health Check]
+```
+
+### Environment Configuration
+```bash
+# Development
+NODE_ENV=development
+NOTION_API_KEY=your-dev-key
+
+# Production
+NODE_ENV=production
+NOTION_API_KEY=your-prod-key
+```
+
+### Monitoring
+- **에러 추적**: Console.error 로깅
+- **성능 모니터링**: Vercel Analytics
+- **사용자 분석**: 기본 접속 로그
+
+## 📈 성능 최적화
+
+### Frontend Optimization
+```typescript
+// 1. 코드 분할
+const AdminDashboard = dynamic(() => import('./components/AdminDashboard'), {
+  loading: () => <p>Loading...</p>,
+});
+
+// 2. 이미지 최적화
+import Image from 'next/image';
+<Image 
+  src="/rotary-logo.png"
+  alt="로고"
+  width={400}
+  height={400}
+  priority
+/>
+
+// 3. 메모이제이션
+const MemberList = memo(({ members }) => {
+  // 컴포넌트 로직
+});
+```
+
+### Backend Optimization
+```typescript
+// 1. API 응답 캐싱
+export async function GET(request: Request) {
+  const data = await getCachedData();
+  return NextResponse.json(data, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=60'
+    }
+  });
+}
+
+// 2. 데이터베이스 쿼리 최적화
+const memberResponse = await notionClient.databases.query({
+  database_id: DATABASE_IDS.MEMBERS,
+  filter: {
+    property: 'phone',
+    number: { equals: Number(phone) }
+  },
+  page_size: 1 // 필요한 만큼만 조회
+});
+```
+
+## 🧪 테스트 전략
+
+### Testing Pyramid
+```
+                /\
+               /  \
+              / E2E \
+             /______\
+            /        \
+           /Integration\
+          /____________\
+         /              \
+        /   Unit Tests   \
+       /________________\
+```
+
+### Unit Tests (계획)
+```typescript
+// 예시: 전화번호 검증 테스트
+describe('Phone validation', () => {
+  test('should accept 4-digit phone number', () => {
+    expect(validatePhone('1234')).toBe(true);
+  });
+
+  test('should reject non-4-digit phone number', () => {
+    expect(validatePhone('123')).toBe(false);
+    expect(validatePhone('12345')).toBe(false);
+  });
+});
+```
+
+### Integration Tests (계획)
+```typescript
+// 예시: API 테스트
+describe('/api/getMemberFees', () => {
+  test('should return member data for valid phone', async () => {
+    const response = await fetch('/api/getMemberFees', {
+      method: 'POST',
+      body: JSON.stringify({ phone: '1234' })
+    });
+    
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data).toHaveProperty('name');
+  });
+});
+```
+
+## 📚 참고 문서
+
+### External APIs
+- [Notion API Documentation](https://developers.notion.com/)
+- [Gmail API Documentation](https://developers.google.com/gmail/api)
+- [Next.js Documentation](https://nextjs.org/docs)
+
+### Internal Documentation
+- `README.md`: 프로젝트 개요 및 설정
+- `WORK_LOG.md`: 작업 기록 및 분석
+- `CRON-SETUP.md`: 자동화 설정 (수정 필요)
+
+### Code Documentation
+```typescript
+/**
+ * 회원의 회비 정보를 조회합니다.
+ * @param phone - 전화번호 뒷 4자리
+ * @returns Promise<MemberData> - 회원 정보 및 회비 현황
+ * @throws {Error} 회원을 찾을 수 없는 경우
+ */
+export async function getMemberFees(phone: string): Promise<MemberData> {
+  // 구현 로직
+}
+```
+
+---
+
+**문서 버전**: v1.0  
+**최종 업데이트**: 2025년 7월 3일  
+**담당자**: Development Team  
+**검토자**: Project Manager

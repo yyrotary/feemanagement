@@ -1,55 +1,51 @@
 import { NextResponse } from 'next/server';
-import { notionClient, DATABASE_IDS } from '@/lib/notion';
-import { 
-  PageObjectResponse,
-  PartialPageObjectResponse,
-  DatabaseObjectResponse,
-  PartialDatabaseObjectResponse
-} from '@notionhq/client/build/src/api-endpoints';
-
-interface NotionEventProperties {
-  Name: {
-    title: Array<{
-      plain_text: string;
-    }>;
-  };
-  Date: {
-    date: {
-      start: string;
-    };
-  };
-}
-
-type NotionPage = PageObjectResponse | PartialPageObjectResponse | DatabaseObjectResponse | PartialDatabaseObjectResponse;
-
-function isFullPage(page: NotionPage): page is PageObjectResponse {
-  return 'properties' in page;
-}
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const memberName = searchParams.get('memberName');
 
-    const response = await notionClient.databases.query({
-      database_id: DATABASE_IDS.SPECIAL_EVENTS,
+    // 특별 이벤트 조회
+    const { data: events, error } = await supabase
+      .from('special_events')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) {
+      throw new Error(`특별 이벤트 조회 실패: ${error.message}`);
+    }
+
+    // member_name이 비어있는 경우를 위해 모든 회원 정보를 조회
+    const { data: members, error: membersError } = await supabase
+      .from('members')
+      .select('id, name');
+
+    if (membersError) {
+      throw new Error(`회원 정보 조회 실패: ${membersError.message}`);
+    }
+
+    // 회원 ID와 이름 매핑
+    const memberMap = new Map();
+    members?.forEach(member => {
+      memberMap.set(member.id, member.name);
     });
 
-    const events = response.results.map((page) => {
-      if (!isFullPage(page)) {
-        throw new Error('Invalid page object from Notion API');
-      }
-      const properties = page.properties as unknown as NotionEventProperties;
-
+    // 데이터 매핑
+    const mappedEvents = events?.map((event) => {
+      // member_name이 비어있으면 member_id로 실제 이름 조회
+      const actualMemberName = event.member_name || memberMap.get(event.member_id) || '';
+      
       return {
-        id: page.id,
-        name: properties.Name?.title[0]?.plain_text || '',
-        date: properties.Date?.date?.start || '',
-        isPersonal: memberName ? properties.Name?.title[0]?.plain_text?.includes(memberName) : false,
+        id: event.id,
+        name: actualMemberName,
+        date: event.date || '',
+        eventType: event.event_type || '',
+        isPersonal: memberName ? actualMemberName?.includes(memberName) : false,
       };
-    });
+    }) || [];
 
-    return NextResponse.json({ events });
+    return NextResponse.json({ events: mappedEvents });
   } catch (error) {
     console.error('Error fetching special events:', error);
     return NextResponse.json({ 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { notionClient } from '@/lib/notion';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
@@ -7,13 +7,21 @@ export async function POST(request: Request) {
     
     console.log('Attempting to delete record:', recordId);
 
-    const response = await notionClient.pages.update({
-      page_id: recordId,
-      archived: true,
-      properties: {} // 빈 properties 객체 추가
-    });
+    if (!recordId) {
+      return NextResponse.json({ error: '기록 ID는 필수입니다.' }, { status: 400 });
+    }
 
-    console.log('Delete response:', response);
+    // Supabase에서 봉사금 기록 삭제
+    const { error } = await supabase
+      .from('service_fees')
+      .delete()
+      .eq('id', recordId);
+
+    if (error) {
+      throw new Error(`봉사금 기록 삭제 실패: ${error.message}`);
+    }
+
+    console.log('Delete successful for record:', recordId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

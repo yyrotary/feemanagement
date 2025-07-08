@@ -1,21 +1,23 @@
 import { NextResponse } from 'next/server';
-import { notionClient, DATABASE_IDS } from '@/lib/notion';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
     const { password } = await request.json();
 
-    const response = await notionClient.databases.query({
-      database_id: DATABASE_IDS.MASTER_INFO,
-      filter: {
-        property: 'pass',
-        rich_text: {
-          equals: password
-        }
-      }
-    });
+    // 마스터 정보에서 비밀번호 확인 (key-value 구조)
+    const { data: masterInfo, error } = await supabase
+      .from('master_info')
+      .select('value')
+      .eq('key', 'pass')
+      .eq('value', password)
+      .single();
 
-    if (response.results.length > 0) {
+    if (error && error.code !== 'PGRST116') {
+      throw new Error(`관리자 인증 확인 실패: ${error.message}`);
+    }
+
+    if (masterInfo) {
       return NextResponse.json({ success: true });
     } else {
       return NextResponse.json({ error: '비밀번호가 올바르지 않습니다.' }, { status: 401 });

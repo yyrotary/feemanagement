@@ -1,108 +1,143 @@
 import { NextResponse } from 'next/server';
-import { notionClient, DATABASE_IDS } from '@/lib/notion';
-import { PageObjectResponse, QueryDatabaseParameters } from '@notionhq/client/build/src/api-endpoints';
-import { NotionMemberProperties, NotionDonationProperties } from '@/lib/notion-types';
+import { supabase } from '@/lib/supabase';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const memberId = searchParams.get('memberId');
   const date = searchParams.get('date');
+  const rotaryYear = searchParams.get('rotaryYear') || 'current';
 
   try {
-    // 필터 옵션 설정
-    let filter: QueryDatabaseParameters['filter'] | undefined;
+    console.log('getDonations API 호출됨:', { memberId, date, rotaryYear });
+
+    // 회기 정보 조회
+    const keyName = rotaryYear === 'current' ? 'rotary_year_start' : 'previous_year_start';
+    const endKeyName = rotaryYear === 'current' ? 'rotary_year_end' : 'previous_year_end';
     
+    const { data: rotaryYearInfo, error: rotaryError } = await supabase
+      .from('master_info')
+      .select('key, value')
+      .in('key', [keyName, endKeyName]);
+    
+    if (rotaryError) {
+      throw new Error(`회기 정보 조회 실패: ${rotaryError.message}`);
+    }
+    
+    const startDate = rotaryYearInfo?.find(item => item.key === keyName)?.value;
+    const endDate = rotaryYearInfo?.find(item => item.key === endKeyName)?.value;
+    
+    if (!startDate || !endDate) {
+      throw new Error('회기 정보를 찾을 수 없습니다.');
+    }
+    
+    console.log('Rotary year date range for donations:', startDate, 'to', endDate);
+
+    // 개별 회원 정보는 각 기부금 기록마다 조회함
+
+    // 기본 쿼리 설정 (회기 날짜 범위 적용)
+    let query = supabase
+      .from('donations')
+      .select(`
+        id,
+        member_id,
+        member_name,
+        amount,
+        date,
+        method,
+        category,
+        from_friend,
+        created_at
+      `)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false });
+
+    // 필터 적용
     if (memberId) {
-      // 특정 회원의 기부 내역 조회
-      filter = {
-        property: 'name',
-        relation: {
-          contains: memberId,
-        },
-      };
+      query = query.eq('member_id', memberId);
     } else if (date) {
-      // 특정 날짜의 기부 내역 조회
-      filter = {
-        property: 'date',
-        date: {
-          equals: date,
-        },
-      };
+      query = query.eq('date', date);
     }
 
-    const response = await notionClient.databases.query({
-      database_id: DATABASE_IDS.DONATIONS,
-      filter: filter,
-      sorts: [
-        {
-          property: 'date',
-          direction: 'descending',
-        },
-      ],
-    });
+    console.log('쿼리 실행 중...');
+    const { data: donations, error } = await query;
 
-    const donations = await Promise.all(response.results.map(async (page) => {
-      const properties = (page as PageObjectResponse).properties as unknown as NotionDonationProperties;
-      
-      let memberName = '회원';
-      let memberId = '';
-      let fromFriend = undefined;
-      
-      // 회원 정보 가져오기 (relation 필드가 비어있지 않은 경우에만)
-      if (properties.name.relation && properties.name.relation.length > 0) {
-        try {
-          const memberResponse = await notionClient.pages.retrieve({
-            page_id: properties.name.relation[0].id,
-          });
-          
-          memberId = properties.name.relation[0].id;
-          const memberProperties = (memberResponse as PageObjectResponse).properties as unknown as NotionMemberProperties;
-          
-          if (memberProperties.Name && memberProperties.Name.title && memberProperties.Name.title.length > 0) {
-            memberName = memberProperties.Name.title[0].plain_text;
+    if (error) {
+      console.error('Supabase 쿼리 에러:', error);
+      throw error;
+    }
+
+    console.log('donations 조회 결과:', donations);
+
+    // 각 기부금 기록에 대해 회원 정보 조회
+    const formattedDonations = await Promise.all(
+      (donations || []).map(async donation => {
+        let memberName = '회원';
+
+        if (donation.member_id) {
+          try {
+            const { data: donationMemberInfo, error: donationMemberError } = await supabase
+              .from('members')
+              .select('name')
+              .eq('id', donation.member_id)
+              .single();
+
+            if (!donationMemberError && donationMemberInfo) {
+              memberName = donationMemberInfo.name;
+            }
+          } catch (err) {
+            console.error('기부금 회원 정보 조회 실패:', err);
           }
-        } catch (error) {
-          console.error('Error fetching member info:', error);
         }
-      }
 
-      // 우정기부 회원 정보 가져오기
-      if (properties.from_friend?.relation && properties.from_friend.relation.length > 0) {
-        try {
-          const friendResponse = await notionClient.pages.retrieve({
-            page_id: properties.from_friend.relation[0].id,
-          });
-          
-          const friendProperties = (friendResponse as PageObjectResponse).properties as unknown as NotionMemberProperties;
-          
-          if (friendProperties.Name && friendProperties.Name.title && friendProperties.Name.title.length > 0) {
-            fromFriend = {
-              id: properties.from_friend.relation[0].id,
-              name: friendProperties.Name.title[0].plain_text
+        return {
+          id: donation.id,
+          date: donation.date,
+          paid_fee: donation.amount,
+          class: Array.isArray(donation.category) ? donation.category : [donation.category || ''],
+          method: Array.isArray(donation.method) ? donation.method : [donation.method || ''],
+          memberId: donation.member_id,
+          memberName: memberName,
+          from_friend: donation.from_friend ? (() => {
+            let fromFriend;
+            
+            // from_friend가 문자열인 경우 JSON 파싱 시도
+            if (typeof donation.from_friend === 'string') {
+              try {
+                fromFriend = JSON.parse(donation.from_friend);
+              } catch (e) {
+                // 파싱 실패시 문자열 그대로 사용
+                fromFriend = { name: donation.from_friend };
+              }
+            } else if (typeof donation.from_friend === 'object') {
+              fromFriend = donation.from_friend;
+            } else {
+              fromFriend = { name: String(donation.from_friend) };
+            }
+            
+            return {
+              id: fromFriend.id || '',
+              name: fromFriend.name || '친구'
             };
-          }
-        } catch (error) {
-          console.error('Error fetching friend info:', error);
-        }
-      }
+          })() : undefined
+        };
+      })
+    );
 
-      return {
-        id: page.id,
-        date: properties.date.date.start,
-        paid_fee: properties.paid_fee.number,
-        class: properties.class.multi_select.map(item => item.name),
-        method: properties.method.multi_select.map(item => item.name),
-        memberId,
-        memberName,
-        from_friend: fromFriend
-      };
-    }));
+    console.log('formatted donations:', formattedDonations);
 
-    return NextResponse.json({ donations });
+    return NextResponse.json({ 
+      donations: formattedDonations,
+      rotaryYear: rotaryYear === 'current' ? '25-26' : '24-25',
+      dateRange: `${startDate} ~ ${endDate}`
+    });
   } catch (error) {
     console.error('Error fetching donations:', error);
     return NextResponse.json(
-      { error: '기부 내역을 가져오는데 실패했습니다.' },
+      { 
+        error: '기부 내역을 가져오는데 실패했습니다.',
+        details: JSON.stringify(error, null, 2)
+      },
       { status: 500 }
     );
   }

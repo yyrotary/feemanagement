@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { notionClient } from '@/lib/notion';
+import { supabase } from '@/lib/supabase';
 
 interface UpdateMasterInfoRequest {
-  id: string;
+  id?: string;
   exchange_rate?: number;
   specialevent_fee?: number;
+  special_event_fee?: number; // 실제 key명
   pass?: string;
   sdonation?: number;
   // 필요한 다른 필드들 추가 가능
@@ -12,57 +13,35 @@ interface UpdateMasterInfoRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const { id, exchange_rate, specialevent_fee, pass, sdonation } = await request.json() as UpdateMasterInfoRequest;
+    const updateData = await request.json() as UpdateMasterInfoRequest;
 
-    if (!id) {
-      return NextResponse.json({ error: '업데이트할 페이지 ID가 필요합니다.' }, { status: 400 });
+    // key-value 구조에 맞게 각 필드를 개별적으로 업데이트
+    const updates = [];
+
+    if (updateData.exchange_rate !== undefined) {
+      updates.push(updateMasterInfoField('exchange_rate', updateData.exchange_rate.toString()));
     }
 
-    // 업데이트할 속성 객체 생성
-    type NotionPropertyValue = 
-      | { number: number }
-      | { rich_text: Array<{ text: { content: string } }> };
-    
-    const properties: Record<string, NotionPropertyValue> = {};
-
-    if (exchange_rate !== undefined) {
-      properties.exchange_rate = {
-        number: exchange_rate
-      };
+    if (updateData.specialevent_fee !== undefined || updateData.special_event_fee !== undefined) {
+      const value = updateData.specialevent_fee || updateData.special_event_fee;
+      updates.push(updateMasterInfoField('special_event_fee', value!.toString()));
     }
 
-    if (specialevent_fee !== undefined) {
-      properties.specialevent_fee = {
-        number: specialevent_fee
-      };
+    if (updateData.pass !== undefined) {
+      updates.push(updateMasterInfoField('pass', updateData.pass));
     }
 
-    if (pass !== undefined) {
-      properties.pass = {
-        rich_text: [{ 
-          text: { 
-            content: pass 
-          } 
-        }]
-      };
+    if (updateData.sdonation !== undefined) {
+      updates.push(updateMasterInfoField('sdonation', updateData.sdonation.toString()));
     }
 
-    if (sdonation !== undefined) {
-      properties.sdonation = {
-        number: sdonation
-      };
-    }
-
-    // 페이지 업데이트
-    await notionClient.pages.update({
-      page_id: id,
-      properties
-    });
+    // 모든 업데이트 실행
+    await Promise.all(updates);
 
     return NextResponse.json({ 
       success: true,
       message: '설정이 성공적으로 업데이트되었습니다.',
-      updated: { id, exchange_rate, specialevent_fee, pass, sdonation }
+      updated: updateData
     });
   } catch (error) {
     console.error('Error updating master info:', error);
@@ -70,5 +49,17 @@ export async function POST(request: NextRequest) {
       error: '설정 업데이트에 실패했습니다.',
       details: error instanceof Error ? error.message : String(error) 
     }, { status: 500 });
+  }
+}
+
+// 개별 설정 필드 업데이트 함수
+async function updateMasterInfoField(key: string, value: string) {
+  const { error } = await supabase
+    .from('master_info')
+    .update({ value: value })
+    .eq('key', key);
+
+  if (error) {
+    throw new Error(`${key} 업데이트 실패: ${error.message}`);
   }
 } 

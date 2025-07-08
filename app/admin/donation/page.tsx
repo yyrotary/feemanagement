@@ -44,6 +44,7 @@ export default function DonationPage() {
   const [selectedClass, setSelectedClass] = useState<typeof CLASSES[number] | null>(null);
   const [showMemberSelection, setShowMemberSelection] = useState(false);
   const [exchangeRate, setExchangeRate] = useState<number>(0);
+  const [rotaryYear, setRotaryYear] = useState<'current' | 'previous'>('current');
 
   useEffect(() => {
     const cachedMembers = sessionStorage.getItem('members');
@@ -87,7 +88,7 @@ export default function DonationPage() {
     const loadDonations = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/getDonations?date=${date}`);
+        const response = await fetch(`/api/getDonations?date=${date}&rotaryYear=${rotaryYear}`);
         if (!response.ok) throw new Error('기부 기록 로드 실패');
         const data = await response.json();
         
@@ -116,7 +117,7 @@ export default function DonationPage() {
     };
 
     loadDonations();
-  }, [date]);
+  }, [date, rotaryYear]);
 
   const handleClassSelect = (donationClass: typeof CLASSES[number]) => {
     setSelectedClass(donationClass);
@@ -280,6 +281,22 @@ export default function DonationPage() {
           onChange={(e) => handleDateChange(e.target.value)}
           className={styles.dateInput}
         />
+      </div>
+
+      {/* 회기 선택 */}
+      <div className={styles.rotaryYearSelector}>
+        <button
+          className={rotaryYear === 'current' ? styles.activeRotaryYear : styles.inactiveRotaryYear}
+          onClick={() => setRotaryYear('current')}
+        >
+          현재 회기 (25-26)
+        </button>
+        <button
+          className={rotaryYear === 'previous' ? styles.activeRotaryYear : styles.inactiveRotaryYear}
+          onClick={() => setRotaryYear('previous')}
+        >
+          이전 회기 (24-25)
+        </button>
       </div>
 
       {/* 기부 종류 선택 버튼 */}

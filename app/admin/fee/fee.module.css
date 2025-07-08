@@ -47,6 +47,40 @@
   justify-content: center;
 }
 
+.rotaryYearSelector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
+  justify-content: center;
+}
+
+.activeRotaryYear {
+  padding: 12px 24px;
+  border: 2px solid #3498db;
+  background: #3498db;
+  color: white;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.inactiveRotaryYear {
+  padding: 12px 24px;
+  border: 2px solid #3498db;
+  background: white;
+  color: #3498db;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.inactiveRotaryYear:hover {
+  background: #3498db;
+  color: white;
+}
+
 .feeTypeButton {
   padding: 0.8rem 0;
   min-width: 120px;

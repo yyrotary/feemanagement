@@ -1,81 +1,93 @@
 import { NextResponse } from 'next/server';
-import { notionClient, DATABASE_IDS } from '@/lib/notion';
-import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
-import { NotionMemberProperties, NotionFeeProperties } from '@/lib/notion-types';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
-    const { phone } = await request.json();
-    //console.log('Searching for phone:', phone);
+    const { phone, rotaryYear = 'current' } = await request.json();
+    console.log('Searching for phone:', phone, 'rotaryYear:', rotaryYear);
+
+    // 회기 정보 조회
+    const keyName = rotaryYear === 'current' ? 'rotary_year_start' : 'previous_year_start';
+    const endKeyName = rotaryYear === 'current' ? 'rotary_year_end' : 'previous_year_end';
+    
+    const { data: rotaryYearInfo, error: rotaryError } = await supabase
+      .from('master_info')
+      .select('key, value')
+      .in('key', [keyName, endKeyName]);
+    
+    if (rotaryError) {
+      throw new Error(`회기 정보 조회 실패: ${rotaryError.message}`);
+    }
+    
+    const startDate = rotaryYearInfo?.find(item => item.key === keyName)?.value;
+    const endDate = rotaryYearInfo?.find(item => item.key === endKeyName)?.value;
+    
+    if (!startDate || !endDate) {
+      throw new Error('회기 정보를 찾을 수 없습니다.');
+    }
+    
+    console.log('Rotary year date range:', startDate, 'to', endDate);
 
     // 회원 정보 조회
-    const memberResponse = await notionClient.databases.query({
-      database_id: DATABASE_IDS.MEMBERS,
-      filter: {
-        property: 'phone',
-        number: {
-          equals: Number(phone)
-        }
-      }
-    });
+    const { data: members, error: memberError } = await supabase
+      .from('members')
+      .select('*')
+      .eq('phone', Number(phone))
+      .limit(1);
 
-    //console.log('Member response:', memberResponse);
+    if (memberError) {
+      throw new Error(`회원 조회 실패: ${memberError.message}`);
+    }
 
-    if (!memberResponse.results.length) {
+    console.log('Member response:', members);
+
+    if (!members || members.length === 0) {
       return NextResponse.json({ error: '회원을 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    const member = memberResponse.results[0] as PageObjectResponse;
-    const properties = member.properties as unknown as NotionMemberProperties;
-    //console.log('Member properties:', properties);
+    const member = members[0];
+    console.log('Member properties:', member);
 
-    //console.log('All properties:', JSON.stringify(properties, null, 2));
+    const name = member.name || '';
+    const nickname = member.nickname || '';
 
-    const name = properties.Name.title[0].plain_text;
-    const nickname = properties.nick?.rich_text?.[0]?.plain_text || '';
+    console.log('Deduction field:', member.deduction);
 
-    //console.log('Deduction field:', properties.deduction);  // 필드 이름 확인
-
-    // multi_select 배열에 'senior'가 있는지 확인
-    const isElder = properties.deduction?.multi_select.some(item => item.name === 'senior') || false;
+    // deduction 배열에 'senior'가 있는지 확인
+    const isElder = Array.isArray(member.deduction) && 
+                   member.deduction.some((item: string) => item === 'senior') || false;
     const requiredFee = isElder ? 200000 : 720000;
 
-    //console.log('Deduction values:', properties.deduction.multi_select.map(item => item.name));
-    //console.log('Is senior:', isElder);
-    //console.log('Required fee:', requiredFee);
+    console.log('Deduction values:', member.deduction);
+    console.log('Is senior:', isElder);
+    console.log('Required fee:', requiredFee);
 
-    // 회비 내역 조회
-    const feeResponse = await notionClient.databases.query({
-      database_id: DATABASE_IDS.FEES,
-      filter: {
-        property: 'name',
-        relation: {
-          contains: member.id
-        }
-      },
-      sorts: [
-        {
-          property: 'date',
-          direction: 'descending'
-        }
-      ]
-    });
+    // 해당 회기의 회비 내역 조회 (날짜 범위로 필터링)
+    const { data: feeHistory, error: feeError } = await supabase
+      .from('fees')
+      .select('date, amount, method')
+      .eq('member_id', member.id)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false });
 
-    //console.log('Fee response:', feeResponse);
+    if (feeError) {
+      throw new Error(`회비 내역 조회 실패: ${feeError.message}`);
+    }
 
-    const feeHistory = feeResponse.results.map((fee) => {
-      const feePage = fee as PageObjectResponse;
-      const feeProperties = feePage.properties as unknown as NotionFeeProperties;
-      const method = feeProperties.method.multi_select.map(m => m.name);
-      console.log('General Fee method from Notion:', method, typeof method);
+    console.log('Fee response for rotary year:', feeHistory);
+
+    const formattedFeeHistory = feeHistory?.map((fee) => {
+      const method = Array.isArray(fee.method) ? fee.method : [fee.method || 'deposit'];
+      console.log('General Fee method from Supabase:', method, typeof method);
       return {
-        date: feeProperties.date.date.start,
-        paid_fee: feeProperties.paid_fee.number,
+        date: fee.date,
+        paid_fee: fee.amount,
         method
       };
-    });
+    }) || [];
 
-    const totalPaid = feeHistory.reduce((sum, fee) => sum + fee.paid_fee, 0);
+    const totalPaid = formattedFeeHistory.reduce((sum, fee) => sum + fee.paid_fee, 0);
     const remainingFee = Math.max(0, requiredFee - totalPaid);
 
     return NextResponse.json({
@@ -84,7 +96,9 @@ export async function POST(request: Request) {
       nickname,
       totalPaid,
       remainingFee,
-      feeHistory
+      feeHistory: formattedFeeHistory,
+      rotaryYear: rotaryYear === 'current' ? '25-26' : '24-25',
+      dateRange: `${startDate} ~ ${endDate}`
     });
 
   } catch (error) {

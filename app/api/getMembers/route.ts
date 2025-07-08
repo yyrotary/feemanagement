@@ -1,28 +1,16 @@
 import { NextResponse } from 'next/server';
-import { notionClient, DATABASE_IDS } from '@/lib/notion';
-import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
-import { NotionMemberProperties, Member } from '@/lib/notion-types';
+import { supabase } from '@/lib/supabase';
 
 export async function GET() {
   try {
-    const response = await notionClient.databases.query({
-      database_id: DATABASE_IDS.MEMBERS,
-      sorts: [
-        {
-          property: 'Name',
-          direction: 'ascending'
-        }
-      ]
-    });
+    const { data: members, error } = await supabase
+      .from('members')
+      .select('id, name, nickname, phone, join_date, member_fee, paid_fee, unpaid_fee')
+      .order('name', { ascending: true });
 
-    const members = response.results.map((page) => {
-      const pageObj = page as PageObjectResponse;
-      const properties = pageObj.properties as unknown as NotionMemberProperties;
-      return {
-        id: pageObj.id,
-        name: properties.Name.title[0].plain_text
-      };
-    });
+    if (error) {
+      throw error;
+    }
 
     return NextResponse.json(members);
   } catch (error) {
