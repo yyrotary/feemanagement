@@ -161,7 +161,7 @@ export default function Home() {
           <p className={styles.inputHelp}>권민혁 회원님은 휴대번호 앞 4자리 입력</p>
         </form>
       ) : (
-        <InfoSection />
+        <InfoSection rotaryYear={rotaryYear} />
       )}
 
       {memberData && (
