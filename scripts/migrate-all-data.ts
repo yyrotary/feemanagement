@@ -126,14 +126,12 @@ async function migrateAllDonations() {
       return {
         id: page.id,
         member_id: properties.name?.relation?.[0]?.id || null,
-        member_name: properties.id?.title?.[0]?.plain_text || '',
+        member_name: properties.이름?.title?.[0]?.plain_text || '',
         date: properties.date?.date?.start || null,
         amount: properties.paid_fee?.number || 0,
         method: properties.method?.multi_select?.[0]?.name || '',
         category: properties.class?.multi_select?.map(item => item.name) || [],
-        from_friend: properties.from_friend?.rich_text?.[0]?.plain_text ? {
-          name: properties.from_friend.rich_text[0].plain_text
-        } : null,
+        from_friend: properties.from_friend?.relation?.[0]?.id || null,
       }
     })
 
@@ -184,7 +182,7 @@ async function migrateAllTransactions() {
       return {
         id: page.id,
         date: properties.date?.date?.start || null,
-        description: properties.detail?.title?.[0]?.plain_text || '',
+        description: properties.description?.rich_text?.[0]?.plain_text || '',
         in_amount: properties.in?.number || 0,
         out_amount: properties.out?.number || 0,
         balance: properties.balance?.number || 0,

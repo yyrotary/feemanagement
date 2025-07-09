@@ -68,7 +68,7 @@ async function migrateTransactionsOnly() {
       return {
         id: page.id,
         date: properties.date?.date?.start || null,
-        description: properties.detail?.title?.[0]?.plain_text || '',
+        description: properties.description?.rich_text?.[0]?.plain_text || '',
         in_amount: properties.in?.number || 0,
         out_amount: properties.out?.number || 0,
         balance: properties.balance?.number || 0,

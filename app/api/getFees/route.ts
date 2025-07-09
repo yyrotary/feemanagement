@@ -73,8 +73,8 @@ export async function GET(request: Request) {
       let actualMemberName = '회원';
 
       // 1. members 조인 결과가 있으면 사용 (가장 정확함)
-      if (fee.members && fee.members.name) {
-        actualMemberName = fee.members.name;
+      if (fee.members && (fee.members as any).name) {
+        actualMemberName = (fee.members as any).name;
       }
       // 2. member_name이 정상적인 한글 이름인지 확인
       else if (fee.member_name && 
