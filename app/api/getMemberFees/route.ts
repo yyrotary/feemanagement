@@ -53,13 +53,49 @@ export async function POST(request: Request) {
 
     console.log('Deduction field:', member.deduction);
 
-    // deduction 배열에 'senior'가 있는지 확인
-    const isElder = Array.isArray(member.deduction) && 
-                   member.deduction.some((item: string) => item === 'senior') || false;
-    const requiredFee = isElder ? 200000 : 720000;
+    // deduction 배열에 'emeritus'가 있는지 확인 (원로회원)
+    const isEmeritus = Array.isArray(member.deduction) && 
+                      member.deduction.some((item: string) => item === 'emeritus') || false;
+    // deduction 배열에 'junior'가 있는지 확인 (주니어회원)
+    const isJunior = Array.isArray(member.deduction) && 
+                    member.deduction.some((item: string) => item === 'junior') || false;
+    
+    // 마스터 정보에서 회비 설정 가져오기
+    let juniorFee = 360000; // 기본값
+    let emeritusFee = 200000; // 기본값
+
+    try {
+      const { data: feeSettings } = await supabase
+        .from('master_info')
+        .select('key, value')
+        .in('key', ['junior_fee', 'emeritus_fee']);
+
+      if (feeSettings) {
+        const juniorFeeData = feeSettings.find(item => item.key === 'junior_fee');
+        const emeritusFeeData = feeSettings.find(item => item.key === 'emeritus_fee');
+
+        if (juniorFeeData?.value) {
+          juniorFee = parseFloat(juniorFeeData.value) || 360000;
+        }
+        if (emeritusFeeData?.value) {
+          emeritusFee = parseFloat(emeritusFeeData.value) || 200000;
+        }
+      }
+    } catch (feeError) {
+      console.log('회비 설정 조회 실패, 기본값 사용:', feeError);
+    }
+
+    // 회비 계산
+    let requiredFee = 720000; // 기본: 일반회원
+    if (isEmeritus) {
+      requiredFee = emeritusFee;
+    } else if (isJunior) {
+      requiredFee = juniorFee;
+    }
 
     console.log('Deduction values:', member.deduction);
-    console.log('Is senior:', isElder);
+    console.log('Is emeritus:', isEmeritus);
+    console.log('Is junior:', isJunior);
     console.log('Required fee:', requiredFee);
 
     // 해당 회기의 회비 내역 조회 (날짜 범위로 필터링)

@@ -8,6 +8,8 @@ interface UpdateMasterInfoRequest {
   special_event_fee?: number; // 실제 key명
   pass?: string;
   sdonation?: number;
+  junior_fee?: number;
+  emeritus_fee?: number;
   // 필요한 다른 필드들 추가 가능
 }
 
@@ -33,6 +35,14 @@ export async function POST(request: NextRequest) {
 
     if (updateData.sdonation !== undefined) {
       updates.push(updateMasterInfoField('sdonation', updateData.sdonation.toString()));
+    }
+
+    if (updateData.junior_fee !== undefined) {
+      updates.push(updateMasterInfoField('junior_fee', updateData.junior_fee.toString()));
+    }
+
+    if (updateData.emeritus_fee !== undefined) {
+      updates.push(updateMasterInfoField('emeritus_fee', updateData.emeritus_fee.toString()));
     }
 
     // 모든 업데이트 실행

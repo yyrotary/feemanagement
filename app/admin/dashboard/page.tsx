@@ -33,6 +33,10 @@ export default function Dashboard() {
           <span className={styles.menuIcon}>🎁</span>
           <span className={styles.menuText}>기부금 기록</span>
         </Link>
+        <Link href="/admin/members" className={styles.menuItem}>
+          <span className={styles.menuIcon}>👥</span>
+          <span className={styles.menuText}>회원 관리</span>
+        </Link>
         <Link href="/admin/transactions" className={styles.menuItem}>
           <span className={styles.menuIcon}>🏦</span>
           <span className={styles.menuText}>통장 거래내역</span>

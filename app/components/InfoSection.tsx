@@ -22,6 +22,7 @@ export default function InfoSection() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [rotaryYear, setRotaryYear] = useState<'current' | 'previous'>('current');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,7 +33,7 @@ export default function InfoSection() {
         // 두 API 호출을 병렬로 처리
         const [noticesRes, contributorsRes] = await Promise.all([
           fetch('/api/getNotices'),
-          fetch('/api/getTopContributors')
+          fetch(`/api/getTopContributors?rotaryYear=${rotaryYear}`)
         ]);
 
         if (!noticesRes.ok) {
@@ -64,7 +65,7 @@ export default function InfoSection() {
     };
 
     fetchData();
-  }, []);
+  }, [rotaryYear]);
 
   // 날짜 포맷 함수
   const formatDate = (dateString: string) => {
@@ -152,6 +153,23 @@ export default function InfoSection() {
           <div className={styles.contributorsContainer}>
             <h3 className={styles.contributorsTitle}>기여자 TOP 5</h3>
             <p className={styles.contributorsSubtitle}>(봉사금, 기부금, 우정기부금 합산)</p>
+            
+            {/* 회기 선택 버튼 */}
+            <div className={styles.rotaryYearSelector}>
+              <button
+                className={rotaryYear === 'current' ? styles.activeRotaryYear : styles.inactiveRotaryYear}
+                onClick={() => setRotaryYear('current')}
+              >
+                현재 회기 (25-26)
+              </button>
+              <button
+                className={rotaryYear === 'previous' ? styles.activeRotaryYear : styles.inactiveRotaryYear}
+                onClick={() => setRotaryYear('previous')}
+              >
+                이전 회기 (24-25)
+              </button>
+            </div>
+            
             {contributors && contributors.length > 0 ? (
               <div className={styles.contributorsList}>
                 {contributors.map(renderContributor)}

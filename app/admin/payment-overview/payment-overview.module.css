@@ -245,6 +245,17 @@
   position: relative;
 }
 
+.clickable {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.clickable:hover {
+  background-color: #f1f5f9 !important;
+  transform: scale(1.01);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
 .progressBar {
   position: relative;
   height: 20px;

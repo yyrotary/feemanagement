@@ -905,29 +905,30 @@ async function saveTransactionsToNotion(transactions: Array<{
             relation: [{ id: foundMemberId }]
           };
           
+          // 자동 기록 기능 비활성화 (2024-12-19)
           // 추가 처리: 입금 내역의 적요에 따라 해당하는 DB에 항목 생성
-          const memberName = memberNameMap.get(foundMemberId) || '';
+          // const memberName = memberNameMap.get(foundMemberId) || '';
           
-          try {
-            // 1. 회비 처리
-            if (cleanDescription.includes('회비')) {
-              console.log(`회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
-              await createFeeRecord(foundMemberId, transaction.date, transaction.in);
-            }
-            // 2. 봉사금 처리
-            else if (cleanDescription.includes('봉사')) {
-              console.log(`봉사금 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
-              await createServiceFeeRecord(foundMemberId, transaction.date, transaction.in);
-            }
-            // 3. 특별회비/경조사 처리
-            else if (cleanDescription.includes('특별') || cleanDescription.includes('경조')) {
-              console.log(`특별회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
-              await createSpecialFeeRecord(foundMemberId, transaction.date, transaction.in);
-            }
-          } catch (error) {
-            console.error(`회원 ${memberName}의 입금 내역 처리 중 오류:`, error);
-            // 계속 진행 (메인 거래내역은 저장)
-          }
+          // try {
+          //   // 1. 회비 처리
+          //   if (cleanDescription.includes('회비')) {
+          //     console.log(`회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+          //     await createFeeRecord(foundMemberId, transaction.date, transaction.in);
+          //   }
+          //   // 2. 봉사금 처리
+          //   else if (cleanDescription.includes('봉사')) {
+          //     console.log(`봉사금 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+          //     await createServiceFeeRecord(foundMemberId, transaction.date, transaction.in);
+          //   }
+          //   // 3. 특별회비/경조사 처리
+          //   else if (cleanDescription.includes('특별') || cleanDescription.includes('경조')) {
+          //     console.log(`특별회비 입금 감지됨: ${memberName}, 금액: ${transaction.in}원`);
+          //     await createSpecialFeeRecord(foundMemberId, transaction.date, transaction.in);
+          //   }
+          // } catch (error) {
+          //   console.error(`회원 ${memberName}의 입금 내역 처리 중 오류:`, error);
+          //   // 계속 진행 (메인 거래내역은 저장)
+          // }
         }
       }
       
@@ -947,7 +948,9 @@ async function saveTransactionsToNotion(transactions: Array<{
   }
 }
 
+// 자동 기록 함수들 비활성화 (2024-12-19)
 // 회비 내역 생성 함수
+/*
 async function createFeeRecord(memberId: string, date: string, amount: number) {
   try {
     await notionClient.pages.create({
@@ -1036,6 +1039,7 @@ async function createSpecialFeeRecord(memberId: string, date: string, amount: nu
     throw error;
   }
 }
+*/
 
 // GET 메서드 수정 - 메일 하나씩 처리하도록 변경
 export async function GET(request: Request) {

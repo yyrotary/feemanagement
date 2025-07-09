@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import styles from './payment-overview.module.css';
+import PaymentDetailsModal from '../../components/PaymentDetailsModal';
 
 type MemberPayment = {
   memberId: number;
@@ -53,6 +54,14 @@ export default function PaymentOverview() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'feeRate' | 'serviceRate'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  
+  // 모달 상태
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<{
+    id: number;
+    name: string;
+    paymentType: 'fee' | 'special' | 'service' | 'donation';
+  } | null>(null);
 
   const fetchPaymentOverview = async () => {
     setLoading(true);
@@ -133,6 +142,25 @@ export default function PaymentOverview() {
     if (rate >= 100) return styles.complete;
     if (rate >= 50) return styles.partial;
     return styles.incomplete;
+  };
+
+  const handlePaymentClick = (memberId: number, memberName: string, paymentType: 'fee' | 'special' | 'service' | 'donation') => {
+    setSelectedMember({
+      id: memberId,
+      name: memberName,
+      paymentType
+    });
+    setModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setModalOpen(false);
+    setSelectedMember(null);
+  };
+
+  const handleModalUpdate = () => {
+    // 모달에서 업데이트가 발생했을 때 데이터 새로고침
+    fetchPaymentOverview();
   };
 
   if (loading) {
@@ -258,7 +286,11 @@ export default function PaymentOverview() {
                   </div>
                   <div className={styles.memberNickname}>{member.nickname}</div>
                 </td>
-                <td className={styles.feeCell}>
+                <td 
+                  className={`${styles.feeCell} ${styles.clickable}`}
+                  onClick={() => handlePaymentClick(member.memberId, member.memberName, 'fee')}
+                  title="클릭하여 연회비 납부 내역 보기"
+                >
                   <div className={`${styles.progressBar} ${getCompletionClass(member.feeCompletionRate)}`}>
                     <div className={styles.progressFill} style={{width: `${Math.min(100, member.feeCompletionRate)}%`}}></div>
                     <span className={styles.progressText}>{member.feeCompletionRate}%</span>
@@ -270,7 +302,11 @@ export default function PaymentOverview() {
                     <div className={styles.remainingFee}>미납: {formatCurrency(member.remainingFees)}</div>
                   )}
                 </td>
-                <td className={styles.feeCell}>
+                <td 
+                  className={`${styles.feeCell} ${styles.clickable}`}
+                  onClick={() => handlePaymentClick(member.memberId, member.memberName, 'special')}
+                  title="클릭하여 특별회비 납부 내역 보기"
+                >
                   <div className={`${styles.progressBar} ${getCompletionClass(member.specialCompletionRate)}`}>
                     <div className={styles.progressFill} style={{width: `${Math.min(100, member.specialCompletionRate)}%`}}></div>
                     <span className={styles.progressText}>{member.specialCompletionRate}%</span>
@@ -282,7 +318,11 @@ export default function PaymentOverview() {
                     <div className={styles.remainingFee}>미납: {formatCurrency(member.remainingSpecialFees)}</div>
                   )}
                 </td>
-                <td className={styles.feeCell}>
+                <td 
+                  className={`${styles.feeCell} ${styles.clickable}`}
+                  onClick={() => handlePaymentClick(member.memberId, member.memberName, 'service')}
+                  title="클릭하여 봉사금 납부 내역 보기"
+                >
                   <div className={`${styles.progressBar} ${getCompletionClass(member.serviceCompletionRate)}`}>
                     <div className={styles.progressFill} style={{width: `${Math.min(100, member.serviceCompletionRate)}%`}}></div>
                     <span className={styles.progressText}>{member.serviceCompletionRate}%</span>
@@ -294,7 +334,11 @@ export default function PaymentOverview() {
                     <div className={styles.remainingFee}>미납: {formatCurrency(member.remainingServiceFees)}</div>
                   )}
                 </td>
-                <td className={styles.donationCell}>
+                <td 
+                  className={`${styles.donationCell} ${styles.clickable}`}
+                  onClick={() => handlePaymentClick(member.memberId, member.memberName, 'donation')}
+                  title="클릭하여 기부금 납부 내역 보기"
+                >
                   <div className={styles.donationAmount}>
                     총 {formatCurrency(member.grandTotalDonations)}
                   </div>
@@ -315,6 +359,19 @@ export default function PaymentOverview() {
 
       {members.length === 0 && !loading && (
         <div className={styles.noData}>조회된 회원이 없습니다.</div>
+      )}
+
+      {/* 납부 내역 모달 */}
+      {selectedMember && (
+        <PaymentDetailsModal
+          isOpen={modalOpen}
+          onClose={handleModalClose}
+          memberId={selectedMember.id}
+          memberName={selectedMember.name}
+          paymentType={selectedMember.paymentType}
+          rotaryYear={rotaryYear}
+          onUpdate={handleModalUpdate}
+        />
       )}
     </div>
   );

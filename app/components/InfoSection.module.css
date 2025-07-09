@@ -146,6 +146,43 @@
   font-style: italic;
 }
 
+/* 회기 선택 버튼 스타일 */
+.rotaryYearSelector {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.8rem 0;
+}
+
+.activeRotaryYear,
+.inactiveRotaryYear {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 110px;
+}
+
+.activeRotaryYear {
+  background: #0051A1;
+  color: white;
+  box-shadow: 0 2px 6px rgba(0, 81, 161, 0.3);
+}
+
+.inactiveRotaryYear {
+  background: #f0f0f0;
+  color: #666;
+  border: 1px solid #ddd;
+}
+
+.inactiveRotaryYear:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
 .contributorsList {
   display: flex;
   flex-direction: column;

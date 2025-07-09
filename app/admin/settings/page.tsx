@@ -10,6 +10,8 @@ interface MasterInfo {
   specialevent_fee: number;
   pass: string;
   sdonation: number;
+  junior_fee?: number;
+  emeritus_fee?: number;
 }
 
 export default function SettingsPage() {
@@ -39,6 +41,8 @@ export default function SettingsPage() {
     eventType: '',
     date: ''
   });
+
+
 
   // 경조사 종류 목록 가져오기
   const fetchEventTypes = async () => {
@@ -164,7 +168,7 @@ export default function SettingsPage() {
     }
   };
 
-  // 회원 목록 가져오기
+  // 회원 목록 가져오기 (경조사 이벤트 추가용)
   const fetchMembers = async () => {
     try {
       const response = await fetch('/api/getMembers');
@@ -179,6 +183,8 @@ export default function SettingsPage() {
       console.error('회원 목록 불러오기 오류:', err);
     }
   };
+
+
 
   // 경조사 이벤트 추가
   const addSpecialEvent = async (e: React.FormEvent) => {
@@ -267,6 +273,8 @@ export default function SettingsPage() {
       setIsLoadingEvents(false);
     }
   };
+
+
 
   useEffect(() => {
     async function fetchSettings() {
@@ -453,6 +461,40 @@ export default function SettingsPage() {
           <p className={styles.helpText}>봉사인 금액을 설정합니다.</p>
         </div>
 
+        <div className={styles.formGroup}>
+          <label htmlFor="junior_fee" className={styles.label}>
+            주니어 회원 연회비 (원)
+          </label>
+          <input
+            id="junior_fee"
+            type="number"
+            className={styles.input}
+            value={settings?.junior_fee || 360000}
+            onChange={(e) => handleChange('junior_fee', parseFloat(e.target.value))}
+            min="0"
+            step="10000"
+            required
+          />
+          <p className={styles.helpText}>주니어 회원의 연회비를 설정합니다.</p>
+        </div>
+
+        <div className={styles.formGroup}>
+          <label htmlFor="emeritus_fee" className={styles.label}>
+            원로 회원 연회비 (원)
+          </label>
+          <input
+            id="emeritus_fee"
+            type="number"
+            className={styles.input}
+            value={settings?.emeritus_fee || 200000}
+            onChange={(e) => handleChange('emeritus_fee', parseFloat(e.target.value))}
+            min="0"
+            step="10000"
+            required
+          />
+          <p className={styles.helpText}>원로 회원의 연회비를 설정합니다.</p>
+        </div>
+
         <div className={styles.buttonContainer}>
           <button 
             type="submit" 
@@ -636,9 +678,11 @@ export default function SettingsPage() {
               <p>총 {specialEvents.length}건의 경조사가 등록되어 있습니다.</p>
               <p>경조사 한 건당 {settings?.specialevent_fee || 20000}원이 계산됩니다.</p>
             </div>
-          )}
-        </div>
-      </div>
+                     )}
+         </div>
+       </div>
+
+
     </div>
   );
 } 
