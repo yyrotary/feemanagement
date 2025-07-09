@@ -38,30 +38,64 @@ export async function GET(request: Request) {
     
     console.log('Rotary year date range for friend donations:', startDate, 'to', endDate);
 
-    // 해당 회기의 우정기부 조회 (현재 회원이 from_friend인 기부 내역)
-    const { data: donations, error } = await supabase
+    // 해당 회원 정보 조회 (이름으로도 검색할 수 있도록)
+    const { data: member, error: memberError } = await supabase
+      .from('members')
+      .select('id, name')
+      .or(`id.eq.${friendId},name.eq.${friendId}`)
+      .single();
+
+    if (memberError && memberError.code !== 'PGRST116') {
+      console.error('회원 조회 오류:', memberError);
+    }
+
+    const memberName = member?.name || friendId;
+    const memberId = member?.id || friendId;
+
+    // 새로운 from_friend_id/from_friend_name 필드를 사용한 조회
+    let query = supabase
       .from('donations')
       .select('*')
-      .not('from_friend', 'is', null)
       .gte('date', startDate)
       .lte('date', endDate)
       .order('date', { ascending: false });
+
+    // from_friend_id 또는 from_friend_name으로 필터링
+    if (member?.id) {
+      query = query.eq('from_friend_id', member.id);
+    } else {
+      query = query.eq('from_friend_name', memberName);
+    }
+
+    const { data: donations, error } = await query;
 
     if (error) {
       throw new Error(`기부 내역 조회 실패: ${error.message}`);
     }
 
-    // from_friend에 해당 friendId가 포함된 기부만 필터링
-    const friendDonations = donations?.filter(donation => {
+    // 기존 from_friend 필드를 사용한 추가 조회 (호환성을 위해)
+    const { data: legacyDonations, error: legacyError } = await supabase
+      .from('donations')
+      .select('*')
+      .not('from_friend', 'is', null)
+      .is('from_friend_id', null) // 새 필드가 없는 경우만
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: false });
+
+    if (legacyError) {
+      console.error('Legacy donations query error:', legacyError);
+    }
+
+    // Legacy 데이터에서 해당 회원과 일치하는 기부 필터링
+    const filteredLegacyDonations = (legacyDonations || []).filter(donation => {
       if (donation.from_friend) {
         let fromFriend;
         
-        // from_friend가 문자열인 경우 JSON 파싱 시도
         if (typeof donation.from_friend === 'string') {
           try {
             fromFriend = JSON.parse(donation.from_friend);
           } catch (e) {
-            // 파싱 실패시 문자열 그대로 사용
             fromFriend = { name: donation.from_friend };
           }
         } else if (typeof donation.from_friend === 'object') {
@@ -70,13 +104,15 @@ export async function GET(request: Request) {
           return false;
         }
         
-        // id나 name이 friendId와 일치하는지 확인
-        return fromFriend.id === friendId || fromFriend.name === friendId;
+        return fromFriend.id === friendId || fromFriend.name === memberName;
       }
       return false;
-    }) || [];
+    });
 
-    const mappedDonations = friendDonations.map(donation => ({
+    // 두 결과 합치기
+    const allDonations = [...(donations || []), ...filteredLegacyDonations];
+
+    const mappedDonations = allDonations.map(donation => ({
       id: donation.id,
       date: donation.date,
       paid_fee: donation.amount,

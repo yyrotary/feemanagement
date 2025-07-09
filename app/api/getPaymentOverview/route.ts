@@ -5,9 +5,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const rotaryYear = searchParams.get('rotaryYear') || 'current';
-    const searchTerm = searchParams.get('search') || '';
 
-    console.log('getPaymentOverview API 호출됨:', { rotaryYear, searchTerm });
+    console.log('PaymentOverview API - rotaryYear:', rotaryYear);
 
     // 회기 정보 조회
     const keyName = rotaryYear === 'current' ? 'rotary_year_start' : 'previous_year_start';
@@ -31,153 +30,98 @@ export async function GET(request: Request) {
     
     console.log('Rotary year date range:', startDate, 'to', endDate);
 
+    // 마스터 정보에서 회비 설정값 조회
+    const { data: masterInfo, error: masterInfoError } = await supabase
+      .from('master_info')
+      .select('key, value')
+      .in('key', ['regular_fee', 'junior_fee', 'emeritus_fee']);
+
+    if (masterInfoError) {
+      throw new Error(`마스터 정보 조회 실패: ${masterInfoError.message}`);
+    }
+
+    const regularFee = parseInt(masterInfo?.find(item => item.key === 'regular_fee')?.value || '720000');
+    const juniorFee = parseInt(masterInfo?.find(item => item.key === 'junior_fee')?.value || '360000');
+    const emeritusFee = parseInt(masterInfo?.find(item => item.key === 'emeritus_fee')?.value || '200000');
+
     // 모든 회원 조회
-    let membersQuery = supabase
+    const { data: members, error: membersError } = await supabase
       .from('members')
-      .select('id, name, nickname, phone, deduction')
+      .select('*')
       .order('name');
 
-    // 검색어가 있으면 필터링
-    if (searchTerm) {
-      membersQuery = membersQuery.or(`name.ilike.%${searchTerm}%,nickname.ilike.%${searchTerm}%`);
-    }
-
-    const { data: members, error: membersError } = await membersQuery;
-    
     if (membersError) {
-      throw new Error(`회원 정보 조회 실패: ${membersError.message}`);
+      throw new Error(`회원 조회 실패: ${membersError.message}`);
     }
 
-    console.log(`총 ${members.length}명 회원 조회됨`);
+    // 해당 회기의 모든 데이터 조회
+    const [feesResult, serviceFeesResult, specialFeesResult, donationsResult] = await Promise.all([
+      supabase.from('fees').select('*').gte('date', startDate).lte('date', endDate),
+      supabase.from('service_fees').select('*').gte('date', startDate).lte('date', endDate),
+      supabase.from('special_fees').select('*').gte('date', startDate).lte('date', endDate),
+      supabase.from('donations').select('*').gte('date', startDate).lte('date', endDate)
+    ]);
 
-    // 마스터 정보에서 회비 설정 가져오기
-    let juniorFee = 360000; // 기본값
-    let emeritusFee = 200000; // 기본값
+    if (feesResult.error) throw new Error(`회비 조회 실패: ${feesResult.error.message}`);
+    if (serviceFeesResult.error) throw new Error(`봉사금 조회 실패: ${serviceFeesResult.error.message}`);
+    if (specialFeesResult.error) throw new Error(`특별회비 조회 실패: ${specialFeesResult.error.message}`);
+    if (donationsResult.error) throw new Error(`기부금 조회 실패: ${donationsResult.error.message}`);
 
-    try {
-      const { data: feeSettings } = await supabase
-        .from('master_info')
-        .select('key, value')
-        .in('key', ['junior_fee', 'emeritus_fee']);
+    const allFees = feesResult.data || [];
+    const allServiceFees = serviceFeesResult.data || [];
+    const allSpecialFees = specialFeesResult.data || [];
+    const allDonations = donationsResult.data || [];
 
-      if (feeSettings) {
-        const juniorFeeData = feeSettings.find(item => item.key === 'junior_fee');
-        const emeritusFeeData = feeSettings.find(item => item.key === 'emeritus_fee');
-
-        if (juniorFeeData?.value) {
-          juniorFee = parseFloat(juniorFeeData.value) || 360000;
-        }
-        if (emeritusFeeData?.value) {
-          emeritusFee = parseFloat(emeritusFeeData.value) || 200000;
-        }
-      }
-    } catch (feeError) {
-      console.log('회비 설정 조회 실패, 기본값 사용:', feeError);
-    }
-
-    console.log('회비 설정:', { juniorFee, emeritusFee });
-
-    // 각 회원별 납부 현황 계산
+    // 회원별 납부 현황 계산
     const memberPaymentOverview = await Promise.all(
       members.map(async (member) => {
-        // deduction 배열에 'emeritus'가 있는지 확인 (원로회원)
-        const isEmeritus = Array.isArray(member.deduction) && 
-                          member.deduction.some((item: string) => item === 'emeritus') || false;
-        // deduction 배열에 'junior'가 있는지 확인 (주니어회원)
-        const isJunior = Array.isArray(member.deduction) && 
-                        member.deduction.some((item: string) => item === 'junior') || false;
+        // 1. 회비 계산 (회원 유형에 따른 금액)
+        let expectedFee = regularFee; // 기본값: 일반회비
         
-        // 회비 계산: 원로회원, 주니어회원, 일반회원
-        let requiredFee = 720000; // 기본: 일반회원
-        if (isEmeritus) {
-          requiredFee = emeritusFee;
-        } else if (isJunior) {
-          requiredFee = juniorFee;
+        if (member.deduction && Array.isArray(member.deduction)) {
+          if (member.deduction.includes('emeritus')) {
+            expectedFee = emeritusFee; // 원로회원
+          } else if (member.deduction.includes('junior')) {
+            expectedFee = juniorFee; // 주니어회원
+          }
         }
 
-        // 1. 연회비 납부 현황
-        const { data: fees } = await supabase
-          .from('fees')
-          .select('amount')
-          .eq('member_id', member.id)
-          .gte('date', startDate)
-          .lte('date', endDate);
+        const memberFees = allFees.filter(fee => fee.member_id === member.id);
+        const totalPaidFee = memberFees.reduce((sum, fee) => sum + (fee.amount || 0), 0);
+        const unpaidFee = Math.max(0, expectedFee - totalPaidFee);
 
-        const totalFees = fees?.reduce((sum, fee) => sum + (fee.amount || 0), 0) || 0;
-        const remainingFees = Math.max(0, requiredFee - totalFees);
+        // 2. 봉사금 계산
+        const memberServiceFees = allServiceFees.filter(fee => fee.member_id === member.id);
+        const totalServiceFee = memberServiceFees.reduce((sum, fee) => sum + (fee.amount || 0), 0);
 
-        // 2. 특별회비 (경조사) 현황
-        const { data: specialFees } = await supabase
-          .from('special_fees')
-          .select('amount')
-          .eq('member_id', member.id)
-          .gte('date', startDate)
-          .lte('date', endDate);
+        // 3. 특별회비 계산
+        const memberSpecialFees = allSpecialFees.filter(fee => fee.member_id === member.id);
+        const totalSpecialFee = memberSpecialFees.reduce((sum, fee) => sum + (fee.amount || 0), 0);
 
-        const totalSpecialFees = specialFees?.reduce((sum, fee) => sum + (fee.amount || 0), 0) || 0;
+        // 4. 기부금 계산 (본인 기부)
+        const memberDonations = allDonations.filter(donation => donation.member_id === member.id);
+        const totalDonations = memberDonations.reduce((sum, donation) => sum + (donation.amount || 0), 0);
 
-        // 경조사 목록 조회하여 납부해야 할 금액 계산
-        const { data: events } = await supabase
-          .from('special_events')
-          .select('*')
-          .gte('date', startDate)
-          .lte('date', endDate);
+        // 5. 우정기부 계산 (새로운 필드 우선 사용)
+        const friendDonations = allDonations.filter(donation => {
+          // 새로운 from_friend_id 필드 사용
+          if (donation.from_friend_id === member.id) {
+            return true;
+          }
+          
+          // 새로운 from_friend_name 필드 사용
+          if (donation.from_friend_name === member.name) {
+            return true;
+          }
 
-        // 본인 경조사가 아닌 이벤트만 필터링
-        const payableEvents = events?.filter(event => 
-          event.member_name !== member.name && event.member_id !== member.id
-        ) || [];
-
-        const { data: specialEventFeeInfo } = await supabase
-          .from('master_info')
-          .select('value')
-          .eq('key', 'special_event_fee')
-          .single();
-
-        const specialEventFee = specialEventFeeInfo?.value ? parseInt(specialEventFeeInfo.value) : 20000;
-        const requiredSpecialFees = payableEvents.length * specialEventFee;
-        const remainingSpecialFees = Math.max(0, requiredSpecialFees - totalSpecialFees);
-
-        // 3. 봉사금 현황
-        const { data: serviceFees } = await supabase
-          .from('service_fees')
-          .select('amount')
-          .eq('member_id', member.id)
-          .gte('date', startDate)
-          .lte('date', endDate);
-
-        const totalServiceFees = serviceFees?.reduce((sum, fee) => sum + (fee.amount || 0), 0) || 0;
-        const requiredServiceFees = 500000; // 의무 봉사금
-        const remainingServiceFees = Math.max(0, requiredServiceFees - totalServiceFees);
-
-        // 4. 기부금 현황 (본인 기부 + 우정기부)
-        const { data: donations } = await supabase
-          .from('donations')
-          .select('amount')
-          .eq('member_id', member.id)
-          .gte('date', startDate)
-          .lte('date', endDate);
-
-        const totalDonations = donations?.reduce((sum, donation) => sum + (donation.amount || 0), 0) || 0;
-
-        // 우정기부 (from_friend가 현재 회원인 기부)
-        const { data: allDonations } = await supabase
-          .from('donations')
-          .select('amount, from_friend')
-          .not('from_friend', 'is', null)
-          .gte('date', startDate)
-          .lte('date', endDate);
-
-        const friendDonations = allDonations?.filter(donation => {
-          if (donation.from_friend) {
+          // 기존 from_friend 필드 호환성 지원
+          if (donation.from_friend && !donation.from_friend_id && !donation.from_friend_name) {
             let fromFriend;
             
-            // from_friend가 문자열인 경우 JSON 파싱 시도
             if (typeof donation.from_friend === 'string') {
               try {
                 fromFriend = JSON.parse(donation.from_friend);
               } catch (e) {
-                // 파싱 실패시 문자열 그대로 사용
                 fromFriend = { name: donation.from_friend };
               }
             } else if (typeof donation.from_friend === 'object') {
@@ -186,78 +130,73 @@ export async function GET(request: Request) {
               return false;
             }
             
-            // id나 name이 member와 일치하는지 확인
             return fromFriend.id === member.id || fromFriend.name === member.name;
           }
+          
           return false;
-        }) || [];
+        });
 
         const totalFriendDonations = friendDonations.reduce((sum, donation) => sum + (donation.amount || 0), 0);
         const grandTotalDonations = totalDonations + totalFriendDonations;
 
         return {
-          memberId: member.id,
-          memberName: member.name,
+          id: member.id,
+          name: member.name,
           nickname: member.nickname || '',
-          phone: member.phone,
-          isElder: isEmeritus, // 원로회원 여부
-          // 연회비
-          requiredFee,
-          totalFees,
-          remainingFees,
-          feeCompletionRate: requiredFee > 0 ? Math.round((totalFees / requiredFee) * 100) : 100,
-          // 특별회비 (경조사)
-          requiredSpecialFees,
-          totalSpecialFees,
-          remainingSpecialFees,
-          specialFeeEvents: payableEvents.length,
-          specialCompletionRate: requiredSpecialFees > 0 ? Math.round((totalSpecialFees / requiredSpecialFees) * 100) : 100,
-          // 봉사금
-          requiredServiceFees,
-          totalServiceFees,
-          remainingServiceFees,
-          serviceCompletionRate: Math.round((totalServiceFees / requiredServiceFees) * 100),
-          // 기부금
-          totalDonations,
-          totalFriendDonations,
-          grandTotalDonations
+          expectedFee,
+          paidFee: totalPaidFee,
+          unpaidFee,
+          serviceFee: totalServiceFee,
+          specialFee: totalSpecialFee,
+          donation: totalDonations,
+          friendDonation: totalFriendDonations,
+          totalDonation: grandTotalDonations,
+          memberType: member.deduction?.includes('emeritus') ? 'emeritus' : 
+                     member.deduction?.includes('junior') ? 'junior' : 'regular'
         };
       })
     );
 
-    // 통계 정보 계산
-    const totalMembers = memberPaymentOverview.length;
-    const feeCompleteMembers = memberPaymentOverview.filter(m => m.remainingFees === 0).length;
-    const specialFeeCompleteMembers = memberPaymentOverview.filter(m => m.remainingSpecialFees === 0).length;
-    const serviceFeeCompleteMembers = memberPaymentOverview.filter(m => m.remainingServiceFees === 0).length;
-
-    const summary = {
-      totalMembers,
-      feeCompleteMembers,
-      feeCompletionRate: totalMembers > 0 ? Math.round((feeCompleteMembers / totalMembers) * 100) : 0,
-      specialFeeCompleteMembers,
-      specialCompletionRate: totalMembers > 0 ? Math.round((specialFeeCompleteMembers / totalMembers) * 100) : 0,
-      serviceFeeCompleteMembers,
-      serviceCompletionRate: totalMembers > 0 ? Math.round((serviceFeeCompleteMembers / totalMembers) * 100) : 0,
-      totalCollectedFees: memberPaymentOverview.reduce((sum, m) => sum + m.totalFees, 0),
-      totalCollectedSpecialFees: memberPaymentOverview.reduce((sum, m) => sum + m.totalSpecialFees, 0),
-      totalCollectedServiceFees: memberPaymentOverview.reduce((sum, m) => sum + m.totalServiceFees, 0),
-      totalCollectedDonations: memberPaymentOverview.reduce((sum, m) => sum + m.grandTotalDonations, 0)
-    };
-
-    return NextResponse.json({
-      success: true,
-      rotaryYear: rotaryYear === 'current' ? '25-26' : '24-25',
-      dateRange: `${startDate} ~ ${endDate}`,
-      summary,
-      members: memberPaymentOverview
+    // 총합 계산
+    const totals = memberPaymentOverview.reduce((acc, member) => ({
+      expectedFee: acc.expectedFee + member.expectedFee,
+      paidFee: acc.paidFee + member.paidFee,
+      unpaidFee: acc.unpaidFee + member.unpaidFee,
+      serviceFee: acc.serviceFee + member.serviceFee,
+      specialFee: acc.specialFee + member.specialFee,
+      donation: acc.donation + member.donation,
+      friendDonation: acc.friendDonation + member.friendDonation,
+      totalDonation: acc.totalDonation + member.totalDonation
+    }), {
+      expectedFee: 0,
+      paidFee: 0,
+      unpaidFee: 0,
+      serviceFee: 0,
+      specialFee: 0,
+      donation: 0,
+      friendDonation: 0,
+      totalDonation: 0
     });
 
+    return NextResponse.json({
+      members: memberPaymentOverview,
+      totals,
+      rotaryYear: rotaryYear === 'current' ? '25-26' : '24-25',
+      dateRange: `${startDate} ~ ${endDate}`,
+      feeSettings: {
+        regular: regularFee,
+        junior: juniorFee,
+        emeritus: emeritusFee
+      }
+    });
   } catch (error) {
     console.error('Error fetching payment overview:', error);
-    return NextResponse.json({ 
-      error: '납부 현황을 가져오는데 실패했습니다.',
-      details: error instanceof Error ? error.message : String(error)
-    }, { status: 500 });
+    return NextResponse.json(
+      { 
+        error: '납부 현황을 가져오는데 실패했습니다.',
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    );
   }
 } 
