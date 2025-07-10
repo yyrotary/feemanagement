@@ -29,7 +29,7 @@ interface FeeAPIResponse {
   id: string;
   date: string;
   paid_fee: number;
-  method: string[];
+  method: string;
   memberId?: string;
   memberName?: string;
 }
@@ -38,7 +38,7 @@ interface SpecialFeeAPIResponse {
   id: string;
   date: string;
   amount: number;
-  method: string[];
+  method: string;
   memberId?: string;
   memberName?: string;
 }
@@ -103,9 +103,7 @@ export default function FeePage() {
             memberId: fee.memberId || '',
             memberName: fee.memberName || '회원',
             paid_fee: fee.paid_fee || 0,
-            method: fee.method && fee.method.length > 0 
-              ? fee.method[0].toLowerCase() as 'cash' | 'card' | 'deposit'
-              : 'deposit'
+            method: (fee.method || 'deposit').toLowerCase() as 'cash' | 'card' | 'deposit'
           }));
           setRecords(formattedRecords);
         } else {
@@ -123,9 +121,7 @@ export default function FeePage() {
             memberId: fee.memberId || '',
             memberName: fee.memberName || '회원',
             amount: fee.amount || 0,
-            method: fee.method && fee.method.length > 0 
-              ? fee.method[0].toLowerCase() as 'cash' | 'card' | 'deposit'
-              : 'deposit'
+            method: (fee.method || 'deposit').toLowerCase() as 'cash' | 'card' | 'deposit'
           }));
           setSpecialRecords(formattedRecords);
         } else {

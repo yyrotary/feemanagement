@@ -84,7 +84,7 @@ export async function GET(request: Request) {
           memberName: memberName,
           amount: fee.amount || 0,
           date: fee.date || '',
-          method: Array.isArray(fee.method) ? fee.method : [fee.method || 'deposit'],
+          method: Array.isArray(fee.method) ? fee.method[0] : (fee.method || 'deposit'),
         };
       })
     );
